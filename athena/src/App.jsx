@@ -4,6 +4,7 @@ import { createApi } from './lib/api.js'
 import { readStoredSession, storeSession } from './lib/session.js'
 import { Home } from './screens/Home.jsx'
 import { Login } from './screens/Login.jsx'
+import { Proctor } from './screens/Proctor.jsx'
 import { Result } from './screens/Result.jsx'
 import { Signup } from './screens/Signup.jsx'
 import { SystemCheck } from './screens/SystemCheck.jsx'
@@ -28,7 +29,7 @@ function App() {
   const onLoggedIn = (nextSession) => {
     setSession(nextSession)
     setResult(null)
-    setScreen('home')
+    setScreen(nextSession.user.role === 'proctor' ? 'proctor' : 'home')
   }
   const onShowResult = (savedResult) => {
     setResult(savedResult)
@@ -51,6 +52,7 @@ function App() {
     setScreen('login')
   }
 
+  if (screen === 'proctor') return <Proctor api={api} session={session} onLogout={onLogout} />
   if (screen === 'home') {
     return (
       <Home

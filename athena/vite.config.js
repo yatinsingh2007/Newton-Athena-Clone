@@ -8,7 +8,8 @@ function contentSecurityPolicy(apiUrl) {
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self'",
-    "img-src 'self' data:",
+    // blob: for the proctor's screenshots, fetched with the login token.
+    "img-src 'self' data: blob:",
     `connect-src ${new URL(apiUrl).origin}`,
   ].join('; ')
 

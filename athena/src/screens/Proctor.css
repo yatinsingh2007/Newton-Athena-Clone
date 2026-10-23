@@ -1,0 +1,181 @@
+.proctor-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+
+.proctor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.proctor-header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.proctor-header .eyebrow {
+  margin-bottom: 4px;
+}
+
+.proctor-header-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.proctor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+}
+
+.proctor-summary .exam-clock,
+.proctor-summary p {
+  margin: 0;
+}
+
+.proctor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proctor-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.proctor-card:hover {
+  border-color: var(--border-strong);
+}
+
+.proctor-card[data-screen='stale'] {
+  border-color: var(--danger);
+}
+
+.proctor-shot,
+.proctor-shot-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--surface-muted);
+}
+
+.proctor-shot {
+  margin-bottom: 8px;
+}
+
+.screenshot-empty {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.proctor-card-name {
+  font-weight: 700;
+}
+
+.proctor-card-status,
+.proctor-card-screen {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.proctor-card[data-screen='stale'] .proctor-card-screen {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.proctor-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.proctor-detail-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.proctor-detail-head p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+}
+
+.proctor-detail-shot {
+  margin: 0 0 20px;
+}
+
+.proctor-shot-large {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
+}
+
+.proctor-detail-shot .screenshot-empty {
+  aspect-ratio: 16 / 10;
+}
+
+.proctor-detail-shot figcaption {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.proctor-strip {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 8px;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.proctor-strip button {
+  display: grid;
+  gap: 4px;
+  width: 140px;
+  padding: 4px;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.proctor-strip button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.proctor-empty {
+  color: var(--text-muted);
+}
