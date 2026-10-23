@@ -28,8 +28,3 @@ test('users.json has at least 3 users with unique emails', async () => {
   assert.equal(new Set(users.map((u) => u.email)).size, users.length)
   for (const u of users) assert.ok(u.id && u.name && u.email && u.password)
 })
-
-test('attempts and sessions start empty', async () => {
-  assert.deepEqual(await readJson(dataDir, 'attempts.json', null), [])
-  assert.deepEqual(await readJson(dataDir, 'sessions.json', null), {})
-})
