@@ -1,0 +1,62 @@
+.result-card {
+  max-width: 460px;
+  text-align: center;
+}
+
+.result-check {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+}
+
+.result-card h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.result-name {
+  margin: 0 0 28px;
+  color: var(--text-muted);
+}
+
+.result-score {
+  margin: 0;
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-score span {
+  color: var(--text-muted);
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.result-percent {
+  margin: 6px 0 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.result-message {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.result-time {
+  margin: 0 0 28px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.result-card .btn {
+  width: 100%;
+}
