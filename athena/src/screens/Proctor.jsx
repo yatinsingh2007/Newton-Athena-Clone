@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { ExamClock } from '../components/ExamClock.jsx'
 import { Screenshot } from '../components/Screenshot.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
-import { attemptLabel, formatAgo, screenState, sortStudents } from '../lib/proctor.js'
+import { formatDuration } from '../lib/away.js'
+import { attemptLabel, awaySummary, formatAgo, screenState, sortStudents } from '../lib/proctor.js'
 import { examPhase, monotonicNow, serverTime } from '../lib/timer.js'
 import './Proctor.css'
 
@@ -41,7 +42,18 @@ function useTick() {
   return clientNow
 }
 
-function StudentDetail({ api, token, student, onBack }) {
+function AwayLine({ attempt, now }) {
+  const { count, totalMs, awayNow } = awaySummary(attempt, now)
+  if (!count) return null
+  return (
+    <span className="proctor-away">
+      {awayNow ? 'Away from the test now' : `Left the test ${count}×`} · {formatDuration(totalMs)} away
+      {awayNow && count > 1 && ` in ${count} times`}
+    </span>
+  )
+}
+
+function StudentDetail({ api, token, student, now, onBack }) {
   const load = useCallback(() => api.proctorScreens(token, student.id), [api, token, student.id])
   const { data } = usePolling(load)
   const [picked, setPicked] = useState(null)
@@ -59,8 +71,22 @@ function StudentDetail({ api, token, student, onBack }) {
           <p>
             {student.email} · {attemptLabel(student.attempt)}
           </p>
+          <AwayLine attempt={student.attempt} now={now} />
         </div>
       </div>
+
+      {student.attempt.away?.length > 0 && (
+        <details className="proctor-away-list">
+          <summary>Times away from the test</summary>
+          <ul>
+            {[...student.attempt.away].reverse().map((e) => (
+              <li key={e.leftAt}>
+                {formatTime(e.leftAt)} · {e.backAt == null ? 'still away' : formatDuration(e.backAt - e.leftAt)}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       {shown ? (
         <figure className="proctor-detail-shot">
@@ -152,15 +178,23 @@ export function Proctor({ api, session, onLogout }) {
               api={api}
               token={session.token}
               student={selected}
+              now={now}
               onBack={() => setSelectedId(null)}
             />
           ) : (
             <ul className="proctor-grid">
               {students.map((student) => {
                 const state = screenState(student, now)
+                const { awayNow } = awaySummary(student.attempt, now)
                 return (
                   <li key={student.id}>
-                    <button type="button" className="proctor-card" data-screen={state} onClick={() => setSelectedId(student.id)}>
+                    <button
+                      type="button"
+                      className="proctor-card"
+                      data-screen={state}
+                      data-away={awayNow}
+                      onClick={() => setSelectedId(student.id)}
+                    >
                       {student.lastScreenshotAt ? (
                         <Screenshot
                           api={api}
@@ -180,6 +214,7 @@ export function Proctor({ api, session, onLogout }) {
                           {SCREEN_LABELS[state]} · {formatAgo(now - student.lastScreenshotAt)}
                         </span>
                       )}
+                      <AwayLine attempt={student.attempt} now={now} />
                     </button>
                   </li>
                 )

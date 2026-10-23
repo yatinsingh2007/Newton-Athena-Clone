@@ -1,3 +1,5 @@
+import { totalAwayMs } from './away.js'
+
 // A screenshot is due every 15 seconds; this long without one means the
 // student's screen isn't coming through.
 export const STALE_SCREEN_MS = 45_000
@@ -8,6 +10,18 @@ export function screenState(student, now) {
   if (student.lastScreenshotAt == null) return 'none'
   if (student.attempt.status !== 'in_progress') return 'done'
   return now - student.lastScreenshotAt > STALE_SCREEN_MS ? 'stale' : 'live'
+}
+
+// How often and how long the student has left the test window, and whether
+// they're away right now.
+export function awaySummary(attempt, now) {
+  const events = attempt.away ?? []
+  const last = events.at(-1)
+  return {
+    count: events.length,
+    totalMs: totalAwayMs(events, now),
+    awayNow: attempt.status === 'in_progress' && last != null && last.backAt == null,
+  }
 }
 
 export function attemptLabel(attempt) {
