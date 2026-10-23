@@ -22,3 +22,16 @@ export function startApp(app) {
     })
   })
 }
+
+export async function request(baseUrl, urlPath, { method = 'GET', token, body } = {}) {
+  const headers = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const res = await fetch(`${baseUrl}${urlPath}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  const text = await res.text()
+  return { status: res.status, body: text ? JSON.parse(text) : null }
+}
