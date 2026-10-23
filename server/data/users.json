@@ -1,5 +1,26 @@
 [
-  { "id": "u1", "name": "Aarav Sharma", "email": "aarav@student.com", "password": "pass123" },
-  { "id": "u2", "name": "Diya Patel", "email": "diya@student.com", "password": "pass123" },
-  { "id": "u3", "name": "Kabir Singh", "email": "kabir@student.com", "password": "pass123" }
+  {
+    "id": "u1",
+    "name": "Aarav Sharma",
+    "email": "aarav@student.com",
+    "password": "pass123"
+  },
+  {
+    "id": "u2",
+    "name": "Diya Patel",
+    "email": "diya@student.com",
+    "password": "pass123"
+  },
+  {
+    "id": "u3",
+    "name": "Kabir Singh",
+    "email": "kabir@student.com",
+    "password": "pass123"
+  },
+  {
+    "id": "5bd46d91-4f21-4f8f-b0fe-ff944748e876",
+    "name": "Yatin Singh",
+    "email": "yatin4591@gmail.com",
+    "passwordHash": "61c90b4d5324498f2aea2d58a2fa419c:df3f75e24f1e8d249f65729ff279a514cb0f1db66cc3747a4186c46e50cb6a302cee5e79dfa52e6bc9cc550f58b88fbbf6ecfa722a01acd5074c079992f57922"
+  }
 ]
