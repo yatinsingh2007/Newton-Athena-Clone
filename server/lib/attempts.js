@@ -1,4 +1,4 @@
-import { readJson, writeJson } from './store.js'
+import { readJson, updateJson } from './store.js'
 import { gradeAnswers } from './grade.js'
 
 // Extra time after the deadline so the client's 0:00 auto-submit still lands.
@@ -9,12 +9,22 @@ export async function findAttempt(dataDir, userId) {
   return attempts.find((a) => a.userId === userId)
 }
 
-export async function saveAttempt(dataDir, attempt) {
-  const attempts = await readJson(dataDir, 'attempts.json', [])
-  const index = attempts.findIndex((a) => a.userId === attempt.userId)
-  if (index === -1) attempts.push(attempt)
-  else attempts[index] = attempt
-  await writeJson(dataDir, 'attempts.json', attempts)
+// Runs fn(attempt) with attempts.json locked, so each check-then-write is atomic.
+// fn returns { next?, value }; `next` replaces this student's attempt.
+export function updateAttempt(dataDir, userId, fn) {
+  return updateJson(dataDir, 'attempts.json', [], async (attempts) => {
+    const index = attempts.findIndex((a) => a.userId === userId)
+    const { next, value } = await fn(index === -1 ? undefined : attempts[index])
+    if (next === undefined) return { value }
+    const updated = [...attempts]
+    if (index === -1) updated.push(next)
+    else updated[index] = next
+    return { next: updated, value }
+  })
+}
+
+export function saveAttempt(dataDir, attempt) {
+  return updateAttempt(dataDir, attempt.userId, () => ({ next: attempt }))
 }
 
 export function deadlineOf(attempt, durationMinutes) {

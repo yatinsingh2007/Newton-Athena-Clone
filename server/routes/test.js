@@ -7,7 +7,7 @@ import {
   isValidAnswers,
   isValidMarked,
   resultOf,
-  saveAttempt,
+  updateAttempt,
 } from '../lib/attempts.js'
 import { requireAuth } from '../lib/auth.js'
 import { readJson } from '../lib/store.js'
@@ -15,6 +15,8 @@ import { readJson } from '../lib/store.js'
 function publicQuestions(questions) {
   return questions.map(({ id, text, options }) => ({ id, text, options }))
 }
+
+const reply = (status, body) => ({ value: { status, body } })
 
 export function testRoutes({ dataDir, now }) {
   const router = Router()
@@ -26,9 +28,8 @@ export function testRoutes({ dataDir, now }) {
 
   router.get('/test', async (req, res) => {
     const test = await loadTest()
-    let attempt = await findAttempt(dataDir, req.user.id)
-    if (!attempt) {
-      attempt = {
+    const attempt = await updateAttempt(dataDir, req.user.id, (current) => {
+      let next = current ?? {
         userId: req.user.id,
         startedAt: now(),
         answers: {},
@@ -37,14 +38,12 @@ export function testRoutes({ dataDir, now }) {
         score: null,
         total: null,
       }
-      await saveAttempt(dataDir, attempt)
-    }
-
-    // Time ran out while the student was away: submit what they had saved.
-    if (!attempt.submittedAt && isExpired(attempt, test)) {
-      attempt = finalizeAttempt(attempt, test.questions, now())
-      await saveAttempt(dataDir, attempt)
-    }
+      // Time ran out while the student was away: submit what they had saved.
+      if (!next.submittedAt && isExpired(next, test)) {
+        next = finalizeAttempt(next, test.questions, now())
+      }
+      return { next: next === current ? undefined : next, value: next }
+    })
 
     if (attempt.submittedAt) {
       return res.json({ status: 'submitted', result: resultOf(attempt) })
@@ -72,13 +71,16 @@ export function testRoutes({ dataDir, now }) {
       return res.status(400).json({ error: 'Invalid marked list' })
     }
 
-    const attempt = await findAttempt(dataDir, req.user.id)
-    if (!attempt) return res.status(404).json({ error: 'Test not started' })
-    if (attempt.submittedAt) return res.status(409).json({ error: 'Already submitted' })
-    if (isExpired(attempt, test)) return res.status(410).json({ error: 'Time is up' })
-
-    await saveAttempt(dataDir, { ...attempt, answers, marked: [...new Set(marked)] })
-    res.json({ ok: true })
+    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+      if (!attempt) return reply(404, { error: 'Test not started' })
+      if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
+      if (isExpired(attempt, test)) return reply(410, { error: 'Time is up' })
+      return {
+        next: { ...attempt, answers, marked: [...new Set(marked)] },
+        value: { status: 200, body: { ok: true } },
+      }
+    })
+    res.status(status).json(body)
   })
 
   router.post('/submit', async (req, res) => {
@@ -88,17 +90,15 @@ export function testRoutes({ dataDir, now }) {
       return res.status(400).json({ error: 'Invalid answers' })
     }
 
-    let attempt = await findAttempt(dataDir, req.user.id)
-    if (!attempt) return res.status(404).json({ error: 'Test not started' })
-    if (attempt.submittedAt) return res.status(409).json({ error: 'Already submitted' })
-
-    // Past the grace period only the answers already saved in time count.
-    if (answers !== undefined && !isExpired(attempt, test)) {
-      attempt = { ...attempt, answers }
-    }
-    attempt = finalizeAttempt(attempt, test.questions, now())
-    await saveAttempt(dataDir, attempt)
-    res.json(resultOf(attempt))
+    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+      if (!attempt) return reply(404, { error: 'Test not started' })
+      if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
+      // Past the grace period only the answers already saved in time count.
+      const graded = answers !== undefined && !isExpired(attempt, test) ? { ...attempt, answers } : attempt
+      const next = finalizeAttempt(graded, test.questions, now())
+      return { next, value: { status: 200, body: resultOf(next) } }
+    })
+    res.status(status).json(body)
   })
 
   router.get('/result', async (req, res) => {
