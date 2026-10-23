@@ -103,6 +103,23 @@ export function freshAttempt(userId, testId, startedAt, history = []) {
   }
 }
 
+// An attempt whose time ran out counts as submitted, even if the app never sent it.
+export function settleAttempt(dataDir, userId, testId, test, now) {
+  return updateAttempt(dataDir, userId, testId, (current) => {
+    if (isStarted(current) && !current.submittedAt && now > deadlineOf(current, test) + GRACE_MS) {
+      const next = finalizeAttempt(current, test.questions, now)
+      return { next, value: next }
+    }
+    return { value: current }
+  })
+}
+
+// Where a student stands at a test, for the screens after login.
+export function attemptOverview(attempt) {
+  const status = attemptStatus(attempt)
+  return { status, result: status === 'submitted' ? resultOf(attempt) : null }
+}
+
 export function attemptStatus(attempt) {
   if (!isStarted(attempt)) return 'not_started'
   return attempt.submittedAt ? 'submitted' : 'in_progress'

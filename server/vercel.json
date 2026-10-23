@@ -4,7 +4,7 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.js": {
-      "includeFiles": "data/{users,questions}.json"
+      "includeFiles": "data/{users,questions,practice}.json"
     }
   },
   "rewrites": [

@@ -23,6 +23,20 @@ test('questions.json has 10 valid questions', async () => {
   }
 })
 
+test('practice.json has 10 valid questions and can be taken at any time', async () => {
+  const test = await readJson(dataDir, 'practice.json', null)
+  assert.ok(test.title)
+  assert.equal(test.durationMinutes, 10)
+  assert.equal(test.startsAt, undefined)
+  assert.equal(test.questions.length, 10)
+  assert.equal(new Set(test.questions.map((q) => q.id)).size, 10)
+  for (const q of test.questions) {
+    assert.ok(q.text, `${q.id} has text`)
+    assert.equal(q.options.length, 4, `${q.id} has 4 options`)
+    assert.ok(Number.isInteger(q.answerIndex) && q.answerIndex >= 0 && q.answerIndex <= 3)
+  }
+})
+
 test('users.json has at least 3 users with unique emails', async () => {
   const users = await readJson(dataDir, 'users.json', [])
   assert.ok(users.length >= 3)

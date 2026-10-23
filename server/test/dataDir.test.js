@@ -15,6 +15,15 @@ test('copies the seed files into an empty writable folder', async () => {
   JSON.parse(await readFile(path.join(target, 'users.json'), 'utf8'))
 })
 
+test('always copies the tests fresh, so an edited test applies', async () => {
+  const seedDir = await makeDataDir()
+  const target = await mkdtemp(path.join(tmpdir(), 'athena-tmp-'))
+  await writeFile(path.join(target, 'practice.json'), '{"title":"old"}\n')
+  await prepareDataDir(seedDir, target)
+  const practice = JSON.parse(await readFile(path.join(target, 'practice.json'), 'utf8'))
+  assert.equal(practice.questions.length, 10)
+})
+
 test('keeps files that are already there, so signups survive a warm restart', async () => {
   const seedDir = await makeDataDir()
   const target = await mkdtemp(path.join(tmpdir(), 'athena-tmp-'))
