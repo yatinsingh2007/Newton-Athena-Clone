@@ -44,6 +44,7 @@ cd server && npm run reset
 - **Timer:** 10 minutes from the first time the test opens, based on the server's clock. When it runs out, the test submits automatically.
 - **Resume:** if the app closes mid-test, log in again to pick up with the same answers and the time that's left. If time ran out meanwhile, the saved answers are graded.
 - **Theme:** light and dark mode follow the OS; the toggle overrides it.
+- **Security:** the window only shows the app's own page, refuses pop-ups and outside navigation, grants camera/mic only to that page, and the production build sets a Content Security Policy.
 
 ## Tests
 
@@ -60,3 +61,5 @@ cd athena && npm test && npm run lint
 | `questions.json` | Test title, duration, and questions with correct answers (never sent to the app) |
 | `attempts.json` | Each student's start time, answers, review marks, and score once submitted |
 | `sessions.json` | Login tokens |
+
+`attempts.json` and `sessions.json` are created by the server as it runs and are not tracked in git.
