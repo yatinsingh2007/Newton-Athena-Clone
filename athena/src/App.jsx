@@ -3,6 +3,7 @@ import { ThemeToggle } from './components/ThemeToggle.jsx'
 import { createApi } from './lib/api.js'
 import { Login } from './screens/Login.jsx'
 import { SystemCheck } from './screens/SystemCheck.jsx'
+import { Test } from './screens/Test.jsx'
 
 const api = createApi()
 
@@ -30,9 +31,9 @@ function App() {
   // Placeholder screens until each real screen lands; "Continue" walks the flow.
   if (screen === 'login') return <Login api={api} onLoggedIn={onLoggedIn} />
   if (screen === 'check') return <SystemCheck user={session.user} onReady={onReady} />
+  if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} />
 
   const next = {
-    test: () => onSubmitted({ score: 0, total: 10, submittedAt: Date.now() }),
     result: onLogout,
   }
 
