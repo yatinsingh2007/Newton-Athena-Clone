@@ -130,6 +130,15 @@ export function Proctor({ api, session, onLogout }) {
   const clientNow = useTick()
   const [selectedId, setSelectedId] = useState(null)
 
+  // Proctors use their Mac as normal; logging out locks the app again.
+  useEffect(() => {
+    const kiosk = window.athena?.kiosk
+    kiosk?.release()
+    return () => {
+      kiosk?.lock()
+    }
+  }, [])
+
   const lostSession = error?.status === 401 || error?.status === 403
   useEffect(() => {
     if (lostSession) onLogout()

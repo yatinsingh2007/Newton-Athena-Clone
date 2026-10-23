@@ -20,11 +20,18 @@ const SETTINGS_URLS = {
   },
 }
 
-// Windows with a test in progress: kept full screen, on top and focused.
+// Locked windows are kept full screen, on top and focused. A window is locked
+// from the moment the app opens; it's only released for a proctor, or while
+// System Settings is open to grant a permission.
 const locked = new Set()
+// Windows with a test in progress: these also can't quit or reload.
+const inTest = new Set()
 
-// With Cmd (or Ctrl): quit, close, hide, minimise, reload, new window, new tab.
-const BLOCKED_KEYS = new Set(['q', 'w', 'h', 'm', 'r', 'n', 't'])
+// With Cmd (or Ctrl): close, hide, minimise, new window, new tab. During the
+// test, quit and reload too; outside it Cmd+Q still quits, since macOS needs
+// Athena restarted after Screen Recording is turned on.
+const BLOCKED_KEYS = new Set(['w', 'h', 'm', 'n', 't'])
+const BLOCKED_IN_TEST = new Set(['q', 'r'])
 
 // The window should only ever show the app's own page.
 function isTrustedUrl(url) {
@@ -54,8 +61,10 @@ function createWindow() {
     },
   })
 
-  // During the test, losing focus (Cmd+Tab, a notification, another desktop)
-  // snaps straight back to the test window.
+  lock(win)
+
+  // While locked, losing focus (Cmd+Tab, a notification, another desktop)
+  // snaps straight back to Athena.
   win.on('blur', () => {
     if (!locked.has(win)) return
     setTimeout(() => {
@@ -66,13 +75,17 @@ function createWindow() {
     }, 100)
   })
 
-  // During the test, shortcuts that would quit, close, hide, minimise, reload
-  // or open something do nothing.
+  // While locked, shortcuts that would close, hide or minimise the window (and,
+  // during the test, quit or reload) do nothing.
   win.webContents.on('before-input-event', (event, input) => {
-    if (!locked.has(win) || input.type !== 'keyDown') return
-    if ((input.meta || input.control) && BLOCKED_KEYS.has(input.key.toLowerCase())) event.preventDefault()
+    if (!locked.has(win) || input.type !== 'keyDown' || !(input.meta || input.control)) return
+    const key = input.key.toLowerCase()
+    if (BLOCKED_KEYS.has(key) || (inTest.has(win) && BLOCKED_IN_TEST.has(key))) event.preventDefault()
   })
-  win.on('closed', () => locked.delete(win))
+  win.on('closed', () => {
+    locked.delete(win)
+    inTest.delete(win)
+  })
 
   // Never leave the app's own page or open new windows.
   win.webContents.on('will-navigate', (event, url) => {
@@ -109,13 +122,25 @@ ipcMain.handle('media:request', async () => {
   return { ...status, granted: status.camera === 'granted' && status.microphone === 'granted' }
 })
 
-ipcMain.handle('media:open-settings', async () => {
+// System Settings has to come to the front, so Athena steps back until the
+// student returns to it, then locks again. During the test that time away is
+// still reported to the proctor.
+async function openSettings(event, url) {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (win && locked.has(win)) {
+    release(win)
+    win.once('focus', () => lock(win))
+  }
+  await shell.openExternal(url)
+}
+
+ipcMain.handle('media:open-settings', async (event) => {
   const urls = SETTINGS_URLS[process.platform]
   if (!urls) return
   // Open the mic page if only the mic is blocked, otherwise the camera page.
   const { camera, microphone } = getMediaStatus()
   const onlyMicBlocked = camera === 'granted' && microphone !== 'granted'
-  await shell.openExternal(onlyMicBlocked ? urls.microphone : urls.camera)
+  await openSettings(event, onlyMicBlocked ? urls.microphone : urls.camera)
 })
 
 // ---- Screen sharing (called from preload.js over IPC) ----
@@ -126,9 +151,9 @@ ipcMain.handle('screen:status', () =>
   process.platform === 'darwin' ? systemPreferences.getMediaAccessStatus('screen') : 'granted',
 )
 
-ipcMain.handle('screen:open-settings', async () => {
+ipcMain.handle('screen:open-settings', async (event) => {
   const url = SETTINGS_URLS[process.platform]?.screen
-  if (url) await shell.openExternal(url)
+  if (url) await openSettings(event, url)
 })
 
 // getDisplayMedia() from our page always gets the whole primary screen, with no
@@ -145,27 +170,51 @@ async function shareScreen(request, callback) {
   }
 }
 
-// ---- Exam lock (called from preload.js over IPC) ----
+// ---- Lock (called from preload.js over IPC) ----
 // Kiosk mode makes the window full screen and, on macOS, hides the Dock and
 // menu bar and asks the system to block Cmd+Tab and swiping to other desktops.
 // macOS doesn't always honour that, so the window also stays on top of
-// everything and takes focus back if it loses it (see createWindow). The app
-// reports any time away to the proctor as well.
+// everything and takes focus back if it loses it (see createWindow). During
+// the test the app reports any time away to the proctor as well.
 
-ipcMain.handle('exam:lock', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender)
-  if (!win || locked.has(win)) return
+function lock(win) {
+  if (win.isDestroyed() || locked.has(win)) return
   locked.add(win)
   win.setKiosk(true)
   win.setAlwaysOnTop(true, 'screen-saver')
+}
+
+function release(win) {
+  locked.delete(win)
+  if (win.isDestroyed()) return
+  win.setAlwaysOnTop(false)
+  win.setKiosk(false)
+}
+
+const senderWindow = (event) => BrowserWindow.fromWebContents(event.sender)
+
+// The test screen opens and closes: no quitting or reloading in between.
+ipcMain.handle('exam:lock', (event) => {
+  const win = senderWindow(event)
+  if (!win) return
+  inTest.add(win)
+  lock(win)
 })
 
 ipcMain.handle('exam:unlock', (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender)
-  if (!win) return
-  locked.delete(win)
-  win.setAlwaysOnTop(false)
-  win.setKiosk(false)
+  const win = senderWindow(event)
+  if (win) inTest.delete(win)
+})
+
+// A proctor's dashboard isn't locked; logging out locks the app again.
+ipcMain.handle('kiosk:release', (event) => {
+  const win = senderWindow(event)
+  if (win && !inTest.has(win)) release(win)
+})
+
+ipcMain.handle('kiosk:lock', (event) => {
+  const win = senderWindow(event)
+  if (win) lock(win)
 })
 
 // ---- App lifecycle ----
@@ -194,7 +243,7 @@ app.whenReady().then(() => {
 
 // No quitting mid-test (Cmd+Q from the menu, the Dock, or logging out).
 app.on('before-quit', (event) => {
-  if (locked.size > 0) event.preventDefault()
+  if (inTest.size > 0) event.preventDefault()
 })
 
 app.on('window-all-closed', () => {

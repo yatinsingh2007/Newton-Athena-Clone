@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('athena', {
     getStatus: () => ipcRenderer.invoke('screen:status'),
     openSettings: () => ipcRenderer.invoke('screen:open-settings'),
   },
+  kiosk: {
+    release: () => ipcRenderer.invoke('kiosk:release'),
+    lock: () => ipcRenderer.invoke('kiosk:lock'),
+  },
   exam: {
     lock: () => ipcRenderer.invoke('exam:lock'),
     unlock: () => ipcRenderer.invoke('exam:unlock'),
