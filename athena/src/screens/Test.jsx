@@ -5,6 +5,7 @@ import { QuestionText } from '../components/QuestionText.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { Timer } from '../components/Timer.jsx'
 import { questionStatus, summarize } from '../lib/questionStatus.js'
+import { createSaveQueue } from '../lib/saveQueue.js'
 import { remainingMs } from '../lib/timer.js'
 import './Test.css'
 
@@ -19,9 +20,10 @@ const timeLeft = (test, clientNow) =>
     clientNow,
   })
 
-export function Test({ api, session, onSubmitted }) {
+export function Test({ api, session, onSubmitted, onSessionLost }) {
   const [test, setTest] = useState(null)
   const [loadError, setLoadError] = useState(null)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [marked, setMarked] = useState([])
@@ -35,9 +37,10 @@ export function Test({ api, session, onSubmitted }) {
   const [submitBusy, setSubmitBusy] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const latest = useRef({ answers: {}, marked: [] })
-  const saveChain = useRef(Promise.resolve())
+  const saveQueue = useRef(null)
 
   const finished = useEffectEvent((result) => onSubmitted(result))
+  const lostSession = useEffectEvent(() => onSessionLost())
 
   useEffect(() => {
     let cancelled = false
@@ -52,12 +55,22 @@ export function Test({ api, session, onSubmitted }) {
         // Resuming: anything answered or marked earlier counts as visited.
         setVisited(new Set([data.questions[0].id, ...Object.keys(data.answers), ...data.marked]))
       },
-      (err) => !cancelled && setLoadError(err.message),
+      (err) => {
+        if (cancelled) return
+        // The login is no longer valid: send the student back to log in again.
+        if (err.status === 401) return lostSession()
+        setLoadError(err.message)
+      },
     )
     return () => {
       cancelled = true
     }
-  }, [api, session.token])
+  }, [api, session.token, loadAttempt])
+
+  function retryLoad() {
+    setLoadError(null)
+    setLoadAttempt((n) => n + 1)
+  }
 
   // One submit at a time, whether from the dialog or the timer.
   async function submitNow() {
@@ -66,6 +79,8 @@ export function Test({ api, session, onSubmitted }) {
     setSubmitBusy(true)
     setSubmitError(null)
     try {
+      // Let a save that's still in flight land first so the server sees one change at a time.
+      await saveQueue.current?.flush()
       onSubmitted(await api.submit(session.token, latest.current.answers))
     } catch (err) {
       submitting.current = false
@@ -88,7 +103,18 @@ export function Test({ api, session, onSubmitted }) {
     return () => clearInterval(id)
   }, [test])
 
-  if (loadError) return <div className="test-status" role="alert">{loadError}</div>
+  if (loadError) {
+    return (
+      <div className="test-status">
+        <div className="test-status-box">
+          <p className="error-text" role="alert">{loadError}</p>
+          <button type="button" className="btn btn-primary" onClick={retryLoad}>
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+  }
   if (!test) return <div className="test-status">Loading your test…</div>
 
   const remaining = timeLeft(test, clock)
@@ -96,25 +122,20 @@ export function Test({ api, session, onSubmitted }) {
   const total = test.questions.length
   const selected = answers[question.id]
 
-  // Saves run one at a time and always send the newest state, so a slow
-  // request can never overwrite a later answer.
   function persist(nextAnswers, nextMarked) {
     setAnswers(nextAnswers)
     setMarked(nextMarked)
     latest.current = { answers: nextAnswers, marked: nextMarked }
-    saveChain.current = saveChain.current.then(async () => {
-      try {
-        await api.saveAttempt(session.token, latest.current)
-        setSaveFailed(false)
-      } catch (err) {
+    saveQueue.current ??= createSaveQueue({
+      save: (state) => api.saveAttempt(session.token, state),
+      onSaved: () => setSaveFailed(false),
+      onError: (err) => {
         // Submitted elsewhere or out of time: let the server settle the result.
-        if (err.status === 409 || err.status === 410) {
-          onSubmitted(await api.submit(session.token, latest.current.answers))
-        } else {
-          setSaveFailed(true)
-        }
-      }
+        if (err.status === 409 || err.status === 410) submitNow()
+        else setSaveFailed(true)
+      },
     })
+    saveQueue.current.enqueue(latest.current)
   }
 
   const goTo = (nextIndex) => {

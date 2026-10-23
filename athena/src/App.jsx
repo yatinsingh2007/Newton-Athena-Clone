@@ -29,7 +29,7 @@ function App() {
   }
 
   if (screen === 'check') return <SystemCheck user={session.user} onReady={onReady} />
-  if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} />
+  if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} onSessionLost={onLogout} />
   if (screen === 'result') return <Result user={session.user} result={result} onLogout={onLogout} />
   return <Login api={api} onLoggedIn={onLoggedIn} />
 }

@@ -250,3 +250,11 @@
   background: var(--danger-soft);
   color: var(--danger);
 }
+
+.test-status-box {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  max-width: 420px;
+  text-align: center;
+}
