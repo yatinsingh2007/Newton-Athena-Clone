@@ -14,7 +14,8 @@ export class ApiError extends Error {
 }
 
 export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...args)) {
-  async function call(path, { method = 'GET', token, body } = {}) {
+  // `as: 'blob'` returns the response as a Blob (an image) instead of JSON.
+  async function call(path, { method = 'GET', token, body, as } = {}) {
     const headers = {}
     if (token) headers.Authorization = `Bearer ${token}`
     // A Blob (an image) is sent as it is; anything else as JSON.
@@ -32,6 +33,7 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
       throw new ApiError('Cannot reach the exam server. Is it running?', 0)
     }
 
+    if (res.ok && as === 'blob') return res.blob()
     const data = await res.json().catch(() => null)
     if (!res.ok) throw new ApiError(data?.error ?? 'Request failed', res.status)
     return data
@@ -48,6 +50,10 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
     getResult: (token) => call('/api/result', { token }),
     retake: (token) => call('/api/retake', { method: 'POST', token }),
     uploadScreen: (token, jpeg) => call('/api/screen', { method: 'POST', token, body: jpeg }),
+    proctorStudents: (token) => call('/api/proctor/students', { token }),
+    proctorScreens: (token, studentId) => call(`/api/proctor/students/${studentId}/screens`, { token }),
+    proctorScreenshot: (token, studentId, takenAt) =>
+      call(`/api/proctor/students/${studentId}/screens/${takenAt}`, { token, as: 'blob' }),
     async submit(token, answers) {
       try {
         return await call('/api/submit', { method: 'POST', token, body: { answers } })

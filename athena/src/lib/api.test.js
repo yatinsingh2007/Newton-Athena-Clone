@@ -45,6 +45,13 @@ test('uploadScreen sends the image as it is', async () => {
   assert.equal(calls[0].body, jpeg)
 })
 
+test('proctorScreenshot returns the image as a Blob', async () => {
+  const impl = async () => new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 200 })
+  const blob = await createApi('http://x', impl).proctorScreenshot('tok', 'u1', 1000)
+  assert.ok(blob instanceof Blob)
+  assert.equal(blob.size, 3)
+})
+
 test('non-2xx throws ApiError with server message', async () => {
   const { impl } = fakeFetch({ 'POST /api/login': [401, { error: 'Invalid email or password' }] })
   await assert.rejects(createApi('http://x', impl).login('a', 'b'), (err) => {
