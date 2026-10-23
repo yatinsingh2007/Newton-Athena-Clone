@@ -87,3 +87,26 @@
   gap: 12px;
   justify-content: flex-end;
 }
+
+.check-mic {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.mic-meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.mic-meter-bar {
+  height: 100%;
+  background: var(--success);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 80ms linear;
+}

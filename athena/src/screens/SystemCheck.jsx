@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { MicMeter } from '../components/MicMeter.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { mediaErrorMessage } from '../lib/mediaErrors.js'
 import './SystemCheck.css'
@@ -52,6 +53,11 @@ export function SystemCheck({ user, onReady }) {
   const cameraOk = isLive(stream?.getVideoTracks()[0])
   const micOk = isLive(stream?.getAudioTracks()[0])
 
+  function start() {
+    stream.getTracks().forEach((t) => t.stop())
+    onReady()
+  }
+
   return (
     <div className="screen-center">
       <div className="corner-toggle">
@@ -91,6 +97,13 @@ export function SystemCheck({ user, onReady }) {
           </div>
         </div>
 
+        {micOk && (
+          <div className="check-mic">
+            Say something — the bar should move.
+            <MicMeter stream={stream} />
+          </div>
+        )}
+
         {error && (
           <div className="check-error">
             <p className="error-text" role="alert">{error}</p>
@@ -109,7 +122,7 @@ export function SystemCheck({ user, onReady }) {
             </button>
           )}
           {stream && (
-            <button type="button" className="btn btn-primary" onClick={onReady}>
+            <button type="button" className="btn btn-primary" onClick={start} disabled={!cameraOk || !micOk}>
               Start Test
             </button>
           )}
