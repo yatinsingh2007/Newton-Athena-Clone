@@ -2,13 +2,16 @@ import { copyFile, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-const seedDir = path.join(import.meta.dirname, '..', 'data')
-// attempts.json and sessions.json are runtime data and start out missing.
-const SEED_FILES = ['users.json', 'questions.json']
+// Real questions, but a fixed set of users: the live users.json grows with every signup.
+const SEED_FILES = {
+  'questions.json': path.join(import.meta.dirname, '..', 'data', 'questions.json'),
+  'users.json': path.join(import.meta.dirname, 'fixtures', 'users.json'),
+}
 
-export async function makeDataDir() {
+// A fresh temp data folder for one test. attempts.json and sessions.json start out missing.
+export async function makeDataDir(from = SEED_FILES) {
   const dir = await mkdtemp(path.join(tmpdir(), 'athena-data-'))
-  for (const file of SEED_FILES) await copyFile(path.join(seedDir, file), path.join(dir, file))
+  for (const [file, source] of Object.entries(from)) await copyFile(source, path.join(dir, file))
   return dir
 }
 

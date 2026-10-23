@@ -35,10 +35,19 @@ test('the new account can log in later', async () => {
   assert.equal((await login('riya@student.com', 'wrong12')).status, 401)
 })
 
+test('the account is saved in users.json alongside the demo students', async () => {
+  await signup(riya)
+  const users = await readJson(dataDir, 'users.json', [])
+  assert.equal(users.length, 4)
+  assert.equal(users.at(-1).email, 'riya@student.com')
+})
+
 test('the password is stored hashed, never as plain text', async () => {
   await signup(riya)
-  const text = JSON.stringify(await readJson(dataDir, 'accounts.json', []))
-  assert.ok(!text.includes('secret1'))
+  const saved = (await readJson(dataDir, 'users.json', [])).at(-1)
+  assert.ok(saved.passwordHash)
+  assert.equal(saved.password, undefined)
+  assert.ok(!JSON.stringify(saved).includes('secret1'))
 })
 
 test('email and name are trimmed and email lowercased', async () => {
@@ -72,5 +81,6 @@ test('invalid input is 400', async () => {
 test('parallel signups with the same email create one account', async () => {
   const results = await Promise.all([signup(riya), signup(riya), signup(riya)])
   assert.deepEqual(results.map((r) => r.status).sort(), [201, 409, 409])
-  assert.equal((await readJson(dataDir, 'accounts.json', [])).length, 1)
+  const users = await readJson(dataDir, 'users.json', [])
+  assert.equal(users.filter((u) => u.email === 'riya@student.com').length, 1)
 })
