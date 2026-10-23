@@ -1,7 +1,7 @@
 {
   "name": "athena",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n vite,electron \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
@@ -53,7 +53,7 @@
     "mac": {
       "category": "public.app-category.education",
       "icon": "build/icon.png",
-      "identity": null,
+      "identity": "-",
       "target": [
         {
           "target": "dmg",
@@ -65,7 +65,9 @@
       "extendInfo": {
         "NSCameraUsageDescription": "Athena needs your camera for the system check before a test.",
         "NSMicrophoneUsageDescription": "Athena needs your microphone for the system check before a test."
-      }
+      },
+      "hardenedRuntime": false,
+      "artifactName": "Athena-${arch}.${ext}"
     },
     "dmg": {
       "title": "Athena ${version}"
