@@ -2,3 +2,5 @@
 # Runtime data written by the server; `npm run reset` recreates them empty.
 /data/attempts.json
 /data/sessions.json
+.vercel
+.env*
