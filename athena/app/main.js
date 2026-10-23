@@ -1,5 +1,6 @@
-import { app, BrowserWindow, session } from 'electron'
+import { app, BrowserWindow, ipcMain, session, shell, systemPreferences } from 'electron'
 import path from 'node:path'
+import { registerMediaIpc } from './media.js'
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
@@ -29,6 +30,8 @@ app.whenReady().then(() => {
     callback(permission === 'media')
   })
   session.defaultSession.setPermissionCheckHandler((webContents, permission) => permission === 'media')
+
+  registerMediaIpc({ ipcMain, systemPreferences, shell, platform: process.platform })
 
   createWindow()
 
