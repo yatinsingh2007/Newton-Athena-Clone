@@ -29,7 +29,7 @@ test('submit grades body answers', async () => {
   now.advance(60_000)
   const res = await submit({ answers: { q1: correct.q1, q2: correct.q2 } })
   assert.equal(res.status, 200)
-  assert.deepEqual(res.body, { score: 2, total: 10, submittedAt: now() })
+  assert.deepEqual(res.body, { score: 2, total: 10, submittedAt: now(), previous: [] })
 })
 
 test('submit within grace is accepted', async () => {
@@ -81,14 +81,17 @@ test('result is 404 before submit and 200 after', async () => {
   await submit({ answers: correct })
   const res = await getResult()
   assert.equal(res.status, 200)
-  assert.deepEqual(res.body, { score: 10, total: 10, submittedAt: now() })
+  assert.deepEqual(res.body, { score: 10, total: 10, submittedAt: now(), previous: [] })
 })
 
 test('GET /api/test after submit returns the result', async () => {
   await startTest()
   await submit({ answers: correct })
   const res = await startTest()
-  assert.deepEqual(res.body, { status: 'submitted', result: { score: 10, total: 10, submittedAt: now() } })
+  assert.deepEqual(res.body, {
+    status: 'submitted',
+    result: { score: 10, total: 10, submittedAt: now(), previous: [] },
+  })
 })
 
 test('GET /api/test after expiry auto-submits saved answers', async () => {

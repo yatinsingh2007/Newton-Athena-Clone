@@ -2,10 +2,13 @@ import { Router } from 'express'
 import {
   deadlineOf,
   finalizeAttempt,
+  freshAttempt,
   GRACE_MS,
+  isStarted,
   isValidAnswers,
   isValidMarked,
   resultOf,
+  retakeAttempt,
   updateAttempt,
 } from '../lib/attempts.js'
 import { requireAuth } from '../lib/auth.js'
@@ -28,15 +31,8 @@ export function testRoutes({ dataDir, now }) {
   router.get('/test', async (req, res) => {
     const test = await loadTest()
     const attempt = await updateAttempt(dataDir, req.user.id, (current) => {
-      let next = current ?? {
-        userId: req.user.id,
-        startedAt: now(),
-        answers: {},
-        marked: [],
-        submittedAt: null,
-        score: null,
-        total: null,
-      }
+      // First visit, or the first visit after a retake: the 10 minutes start now.
+      let next = isStarted(current) ? current : freshAttempt(req.user.id, now(), current?.history)
       // Time ran out while the student was away: submit what they had saved.
       if (!next.submittedAt && isExpired(next, test)) {
         next = finalizeAttempt(next, test.questions, now())
@@ -71,7 +67,7 @@ export function testRoutes({ dataDir, now }) {
     }
 
     const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
-      if (!attempt) return reply(404, { error: 'Test not started' })
+      if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
       if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
       if (isExpired(attempt, test)) return reply(410, { error: 'Time is up' })
       return {
@@ -90,7 +86,7 @@ export function testRoutes({ dataDir, now }) {
     }
 
     const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
-      if (!attempt) return reply(404, { error: 'Test not started' })
+      if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
       if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
       // Past the grace period only the answers already saved in time count.
       const graded = answers !== undefined && !isExpired(attempt, test) ? { ...attempt, answers } : attempt
@@ -104,7 +100,7 @@ export function testRoutes({ dataDir, now }) {
     const test = await loadTest()
     // An attempt whose time ran out counts as submitted, even if the app never sent it.
     const attempt = await updateAttempt(dataDir, req.user.id, (current) => {
-      if (current && !current.submittedAt && isExpired(current, test)) {
+      if (isStarted(current) && !current.submittedAt && isExpired(current, test)) {
         const next = finalizeAttempt(current, test.questions, now())
         return { next, value: next }
       }
@@ -112,6 +108,15 @@ export function testRoutes({ dataDir, now }) {
     })
     if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
     res.json(resultOf(attempt))
+  })
+
+  router.post('/retake', async (req, res) => {
+    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+      if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
+      if (!attempt.submittedAt) return reply(409, { error: 'Submit your current attempt first' })
+      return { next: retakeAttempt(attempt), value: { status: 200, body: { ok: true } } }
+    })
+    res.status(status).json(body)
   })
 
   return router
