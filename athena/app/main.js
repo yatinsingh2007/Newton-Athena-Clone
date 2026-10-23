@@ -4,6 +4,9 @@ import path from 'node:path'
 // Set by `npm run dev`; when missing, load the built files from dist/.
 const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
+// App icon for the window and the macOS Dock (instead of Electron's).
+const iconPath = path.join(import.meta.dirname, '..', 'build', 'icon.png')
+
 // System Settings pages for camera and mic privacy, per OS.
 const SETTINGS_URLS = {
   darwin: {
@@ -35,6 +38,7 @@ function createWindow() {
     minHeight: 650,
     autoHideMenuBar: true,
     title: 'Athena',
+    icon: iconPath,
     webPreferences: {
       preload: path.join(import.meta.dirname, 'preload.js'),
       contextIsolation: true,
@@ -102,6 +106,9 @@ ipcMain.handle('exam:unlock', (event) => {
 // ---- App lifecycle ----
 
 app.whenReady().then(() => {
+  // On macOS the Dock icon comes from the app, not the window.
+  app.dock?.setIcon(iconPath)
+
   // Camera and mic are the only browser permissions the exam needs, and only for our page.
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
     callback(permission === 'media' && isTrustedUrl(details.requestingUrl))
