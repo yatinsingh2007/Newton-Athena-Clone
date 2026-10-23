@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { formatClock, remainingMs } from './timer.js'
+import { autoSubmitDue, formatClock, remainingMs, SUBMIT_RETRY_MS } from './timer.js'
 
 const startedAt = 1_000_000
 
@@ -37,4 +37,15 @@ test('formatClock', () => {
   assert.equal(formatClock(59_000), '00:59')
   assert.equal(formatClock(1), '00:01')
   assert.equal(formatClock(0), '00:00')
+})
+
+test('autoSubmitDue only when time is up and the retry wait has passed', () => {
+  assert.equal(autoSubmitDue({ remaining: 1000, now: 10, retryAt: 0 }), false)
+  assert.equal(autoSubmitDue({ remaining: 0, now: 10, retryAt: 0 }), true)
+  assert.equal(autoSubmitDue({ remaining: 0, now: 10, retryAt: 5000 }), false)
+  assert.equal(autoSubmitDue({ remaining: 0, now: 5000, retryAt: 5000 }), true)
+})
+
+test('SUBMIT_RETRY_MS is 5 seconds', () => {
+  assert.equal(SUBMIT_RETRY_MS, 5000)
 })
