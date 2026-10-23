@@ -49,6 +49,19 @@ export function finalizeAttempt(attempt, questions, now) {
   return { ...attempt, ...gradeAnswers(questions, attempt.answers), submittedAt: now }
 }
 
-export function resultOf({ score, total, submittedAt }) {
-  return { score, total, submittedAt }
+// A not-yet-opened attempt (after a retake) has no start time.
+export const isStarted = (attempt) => attempt?.startedAt != null
+
+export function freshAttempt(userId, startedAt, history = []) {
+  return { userId, startedAt, answers: {}, marked: [], submittedAt: null, score: null, total: null, history }
+}
+
+// Moves a finished attempt into history; the next GET /api/test opens a new one.
+export function retakeAttempt(attempt) {
+  const { score, total, submittedAt } = attempt
+  return freshAttempt(attempt.userId, null, [...(attempt.history ?? []), { score, total, submittedAt }])
+}
+
+export function resultOf({ score, total, submittedAt, history = [] }) {
+  return { score, total, submittedAt, previous: [...history].reverse() }
 }
