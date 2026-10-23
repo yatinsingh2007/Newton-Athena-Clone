@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('athena', {
     request: () => ipcRenderer.invoke('media:request'),
     openSettings: () => ipcRenderer.invoke('media:open-settings'),
   },
+  screen: {
+    getStatus: () => ipcRenderer.invoke('screen:status'),
+    openSettings: () => ipcRenderer.invoke('screen:open-settings'),
+  },
   exam: {
     lock: () => ipcRenderer.invoke('exam:lock'),
     unlock: () => ipcRenderer.invoke('exam:unlock'),
