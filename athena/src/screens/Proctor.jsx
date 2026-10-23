@@ -10,7 +10,7 @@ const REFRESH_MS = 10_000
 
 const formatTime = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })
 
-const SCREEN_LABELS = { none: 'No screen yet', stale: 'Screen not coming through', done: 'Last screen' }
+const SCREEN_LABELS = { live: 'Live screen', stale: 'Screen not coming through', done: 'Last screen' }
 
 // Polls `load` every REFRESH_MS; returns its latest data, when it arrived, and the last error.
 function usePolling(load) {
@@ -177,7 +177,7 @@ export function Proctor({ api, session, onLogout }) {
                       <span className="proctor-card-status">{attemptLabel(student.attempt)}</span>
                       {student.lastScreenshotAt && (
                         <span className="proctor-card-screen">
-                          {SCREEN_LABELS[state] ?? 'Screen'} · {formatAgo(now - student.lastScreenshotAt)}
+                          {SCREEN_LABELS[state]} · {formatAgo(now - student.lastScreenshotAt)}
                         </span>
                       )}
                     </button>
