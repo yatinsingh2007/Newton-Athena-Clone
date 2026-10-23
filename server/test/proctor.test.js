@@ -34,6 +34,7 @@ test('lists every student with their progress, but not proctors', async () => {
   const [aarav, diya] = res.body.students
   assert.equal(aarav.attempt.status, 'in_progress')
   assert.equal(aarav.attempt.startedAt, now())
+  assert.deepEqual(aarav.attempt.away, [])
   assert.equal(aarav.lastScreenshotAt, 1234)
   assert.deepEqual(diya.attempt, { status: 'not_started' })
   assert.equal(diya.lastScreenshotAt, null)

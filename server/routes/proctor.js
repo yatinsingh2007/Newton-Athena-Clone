@@ -7,8 +7,8 @@ import { allUsers } from '../lib/users.js'
 
 function attemptSummary(attempt) {
   if (!isStarted(attempt)) return { status: 'not_started' }
-  const { startedAt, submittedAt, score, total } = attempt
-  return { status: submittedAt ? 'submitted' : 'in_progress', startedAt, submittedAt, score, total }
+  const { startedAt, submittedAt, score, total, away = [] } = attempt
+  return { status: submittedAt ? 'submitted' : 'in_progress', startedAt, submittedAt, score, total, away }
 }
 
 // What proctors see: every student, how far they've got, and their screen.
