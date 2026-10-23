@@ -91,3 +91,21 @@ test('onSaved runs after each successful save', async () => {
   await queue.flush()
   assert.equal(saved, 1)
 })
+
+test('enqueues during a running save cause at most one more save', async () => {
+  const sent = []
+  const first = deferred()
+  let calls = 0
+  const queue = createSaveQueue({
+    save: (state) => { sent.push(state); return calls++ === 0 ? first.promise : Promise.resolve() },
+  })
+  queue.enqueue({ v: 1 })
+  await tick()
+  for (let v = 2; v <= 6; v++) {
+    queue.enqueue({ v })
+    await tick()
+  }
+  first.resolve()
+  await queue.flush()
+  assert.deepEqual(sent, [{ v: 1 }, { v: 6 }])
+})

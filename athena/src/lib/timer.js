@@ -11,3 +11,10 @@ export function formatClock(ms) {
   const seconds = String(totalSeconds % 60).padStart(2, '0')
   return `${minutes}:${seconds}`
 }
+
+// Wait between auto-submit attempts when the server can't be reached at 0:00.
+export const SUBMIT_RETRY_MS = 5000
+
+export function autoSubmitDue({ remaining, now, retryAt }) {
+  return remaining === 0 && now >= retryAt
+}

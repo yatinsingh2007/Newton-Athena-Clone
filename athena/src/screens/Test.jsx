@@ -6,10 +6,13 @@ import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { Timer } from '../components/Timer.jsx'
 import { questionStatus, summarize } from '../lib/questionStatus.js'
 import { createSaveQueue } from '../lib/saveQueue.js'
-import { remainingMs } from '../lib/timer.js'
+import { autoSubmitDue, remainingMs, SUBMIT_RETRY_MS } from '../lib/timer.js'
 import './Test.css'
 
 const LETTERS = ['A', 'B', 'C', 'D']
+
+// A monotonic clock: changing the computer's time can't move the countdown.
+const monotonicNow = () => performance.now()
 
 const timeLeft = (test, clientNow) =>
   remainingMs({
@@ -31,8 +34,9 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
   const paletteButton = useRef(null)
-  const [clock, setClock] = useState(() => Date.now())
+  const [clock, setClock] = useState(monotonicNow)
   const submitting = useRef(false)
+  const autoSubmitRetryAt = useRef(0)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [submitBusy, setSubmitBusy] = useState(false)
   const [submitError, setSubmitError] = useState(null)
@@ -48,7 +52,7 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
       (data) => {
         if (cancelled) return
         if (data.status === 'submitted') return finished(data.result)
-        setTest({ ...data, fetchedAt: Date.now() })
+        setTest({ ...data, fetchedAt: monotonicNow() })
         setAnswers(data.answers)
         setMarked(data.marked)
         latest.current = { answers: data.answers, marked: data.marked }
@@ -73,7 +77,7 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
   }
 
   // One submit at a time, whether from the dialog or the timer.
-  async function submitNow() {
+  async function submitNow({ auto = false } = {}) {
     if (submitting.current) return
     submitting.current = true
     setSubmitBusy(true)
@@ -85,16 +89,20 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
     } catch (err) {
       submitting.current = false
       setSubmitBusy(false)
-      setSubmitError(err.message)
+      // The timer keeps trying on its own, but not on every tick.
+      if (auto) autoSubmitRetryAt.current = monotonicNow() + SUBMIT_RETRY_MS
+      setSubmitError(auto ? `${err.message} Time is up — retrying automatically…` : err.message)
       setConfirmOpen(true)
     }
   }
 
   // Time is up: submit whatever has been answered, no confirmation.
   const onTick = useEffectEvent(() => {
-    const now = Date.now()
+    const now = monotonicNow()
     setClock(now)
-    if (timeLeft(test, now) === 0) submitNow()
+    if (autoSubmitDue({ remaining: timeLeft(test, now), now, retryAt: autoSubmitRetryAt.current })) {
+      submitNow({ auto: true })
+    }
   })
 
   useEffect(() => {
@@ -102,6 +110,13 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
     const id = setInterval(onTick, 500)
     return () => clearInterval(id)
   }, [test])
+
+  // A failed save is retried on its own, not only on the next answer change.
+  useEffect(() => {
+    if (!saveFailed) return
+    const id = setInterval(() => saveQueue.current?.enqueue(latest.current), 5000)
+    return () => clearInterval(id)
+  }, [saveFailed])
 
   if (loadError) {
     return (
@@ -253,7 +268,7 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
             }}
           />
         )}
-        {saveFailed && <span className="save-note">Not saved — will retry</span>}
+        {saveFailed && <span className="save-note">Not saved — retrying…</span>}
         <button type="button" className="btn btn-primary" onClick={() => goTo(index + 1)} disabled={index === total - 1}>
           Next
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
