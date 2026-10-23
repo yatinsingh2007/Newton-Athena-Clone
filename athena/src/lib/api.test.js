@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ApiError, createApi } from './api.js'
+import { ApiError, createApi, resolveApiUrl } from './api.js'
 
 function fakeFetch(routes) {
   const calls = []
@@ -80,4 +80,10 @@ test('retake POSTs with the token', async () => {
   assert.deepEqual(await createApi('http://x', impl).retake('tok'), { ok: true })
   assert.equal(calls[0].method, 'POST')
   assert.equal(calls[0].headers.Authorization, 'Bearer tok')
+})
+
+test('resolveApiUrl uses VITE_API_URL when set, else the local server', () => {
+  assert.equal(resolveApiUrl({ VITE_API_URL: 'https://athena-server-one.vercel.app/' }), 'https://athena-server-one.vercel.app')
+  assert.equal(resolveApiUrl({}), 'http://localhost:4747')
+  assert.equal(resolveApiUrl(undefined), 'http://localhost:4747')
 })
