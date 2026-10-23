@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import {
   deadlineOf,
+  finalizeAttempt,
   findAttempt,
   GRACE_MS,
   isValidAnswers,
   isValidMarked,
+  resultOf,
   saveAttempt,
 } from '../lib/attempts.js'
 import { requireAuth } from '../lib/auth.js'
@@ -17,6 +19,8 @@ function publicQuestions(questions) {
 export function testRoutes({ dataDir, now }) {
   const router = Router()
   const loadTest = () => readJson(dataDir, 'questions.json', null)
+  const isExpired = (attempt, test) =>
+    now() > deadlineOf(attempt, test.durationMinutes) + GRACE_MS
 
   router.use(requireAuth(dataDir))
 
@@ -34,6 +38,16 @@ export function testRoutes({ dataDir, now }) {
         total: null,
       }
       await saveAttempt(dataDir, attempt)
+    }
+
+    // Time ran out while the student was away: submit what they had saved.
+    if (!attempt.submittedAt && isExpired(attempt, test)) {
+      attempt = finalizeAttempt(attempt, test.questions, now())
+      await saveAttempt(dataDir, attempt)
+    }
+
+    if (attempt.submittedAt) {
+      return res.json({ status: 'submitted', result: resultOf(attempt) })
     }
 
     res.json({
@@ -61,12 +75,36 @@ export function testRoutes({ dataDir, now }) {
     const attempt = await findAttempt(dataDir, req.user.id)
     if (!attempt) return res.status(404).json({ error: 'Test not started' })
     if (attempt.submittedAt) return res.status(409).json({ error: 'Already submitted' })
-    if (now() > deadlineOf(attempt, test.durationMinutes) + GRACE_MS) {
-      return res.status(410).json({ error: 'Time is up' })
-    }
+    if (isExpired(attempt, test)) return res.status(410).json({ error: 'Time is up' })
 
     await saveAttempt(dataDir, { ...attempt, answers, marked: [...new Set(marked)] })
     res.json({ ok: true })
+  })
+
+  router.post('/submit', async (req, res) => {
+    const test = await loadTest()
+    const { answers } = req.body ?? {}
+    if (answers !== undefined && !isValidAnswers(answers, test.questions)) {
+      return res.status(400).json({ error: 'Invalid answers' })
+    }
+
+    let attempt = await findAttempt(dataDir, req.user.id)
+    if (!attempt) return res.status(404).json({ error: 'Test not started' })
+    if (attempt.submittedAt) return res.status(409).json({ error: 'Already submitted' })
+
+    // Past the grace period only the answers already saved in time count.
+    if (answers !== undefined && !isExpired(attempt, test)) {
+      attempt = { ...attempt, answers }
+    }
+    attempt = finalizeAttempt(attempt, test.questions, now())
+    await saveAttempt(dataDir, attempt)
+    res.json(resultOf(attempt))
+  })
+
+  router.get('/result', async (req, res) => {
+    const attempt = await findAttempt(dataDir, req.user.id)
+    if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
+    res.json(resultOf(attempt))
   })
 
   return router
