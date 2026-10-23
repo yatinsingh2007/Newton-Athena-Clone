@@ -1,4 +1,5 @@
 import { readJson, writeJson } from './store.js'
+import { gradeAnswers } from './grade.js'
 
 // Extra time after the deadline so the client's 0:00 auto-submit still lands.
 export const GRACE_MS = 10_000
@@ -32,4 +33,12 @@ export function isValidMarked(marked, questions) {
   if (!Array.isArray(marked)) return false
   const ids = new Set(questions.map((q) => q.id))
   return marked.every((id) => ids.has(id))
+}
+
+export function finalizeAttempt(attempt, questions, now) {
+  return { ...attempt, ...gradeAnswers(questions, attempt.answers), submittedAt: now }
+}
+
+export function resultOf({ score, total, submittedAt }) {
+  return { score, total, submittedAt }
 }
