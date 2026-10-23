@@ -10,10 +10,11 @@ import {
   isStarted,
   isValidAnswers,
   isValidMarked,
-  attemptStatus,
+  attemptOverview,
   recordAway,
   resultOf,
   retakeAttempt,
+  settleAttempt,
   updateAttempt,
 } from '../lib/attempts.js'
 import { requireAuth } from '../lib/auth.js'
@@ -44,25 +45,12 @@ export function testRoutes({ dataDir, now }) {
   const testOf = (req) => loadTest(dataDir, req.testId)
   const update = (req, fn) => updateAttempt(dataDir, req.user.id, req.testId, fn)
 
-  // An attempt whose time ran out counts as submitted, even if the app never sent it.
-  const settleAttempt = (req, test) =>
-    update(req, (current) => {
-      if (isStarted(current) && !current.submittedAt && isExpired(current, test)) {
-        const next = finalizeAttempt(current, test.questions, now())
-        return { next, value: next }
-      }
-      return { value: current }
-    })
+  const settle = (req, test) => settleAttempt(dataDir, req.user.id, req.testId, test, now())
 
   // The schedule plus where this student stands, for the screen after login.
   router.get('/exam', async (req, res) => {
     const test = await testOf(req)
-    const attempt = await settleAttempt(req, test)
-    const status = attemptStatus(attempt)
-    res.json({
-      ...examInfo(test),
-      attempt: { status, result: status === 'submitted' ? resultOf(attempt) : null },
-    })
+    res.json({ ...examInfo(test), attempt: attemptOverview(await settle(req, test)) })
   })
 
   router.get('/test', async (req, res) => {
@@ -143,7 +131,7 @@ export function testRoutes({ dataDir, now }) {
   })
 
   router.get('/result', async (req, res) => {
-    const attempt = await settleAttempt(req, await testOf(req))
+    const attempt = await settle(req, await testOf(req))
     if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
     res.json(resultOf(attempt))
   })

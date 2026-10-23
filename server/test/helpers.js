@@ -6,6 +6,7 @@ import { readJson, writeJson } from '../lib/store.js'
 // Real questions, but a fixed set of users: the live users.json grows with every signup.
 const SEED_FILES = {
   'questions.json': path.join(import.meta.dirname, '..', 'data', 'questions.json'),
+  'practice.json': path.join(import.meta.dirname, '..', 'data', 'practice.json'),
   'users.json': path.join(import.meta.dirname, 'fixtures', 'users.json'),
 }
 
