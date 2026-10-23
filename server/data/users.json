@@ -18,6 +18,13 @@
     "password": "pass123"
   },
   {
+    "id": "p1",
+    "name": "Exam Proctor",
+    "email": "proctor@athena.com",
+    "password": "proctor123",
+    "role": "proctor"
+  },
+  {
     "id": "5bd46d91-4f21-4f8f-b0fe-ff944748e876",
     "name": "Yatin Singh",
     "email": "yatin4591@gmail.com",

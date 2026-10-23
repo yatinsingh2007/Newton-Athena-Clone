@@ -1,5 +1,6 @@
 [
   { "id": "u1", "name": "Aarav Sharma", "email": "aarav@student.com", "password": "pass123" },
   { "id": "u2", "name": "Diya Patel", "email": "diya@student.com", "password": "pass123" },
-  { "id": "u3", "name": "Kabir Singh", "email": "kabir@student.com", "password": "pass123" }
+  { "id": "u3", "name": "Kabir Singh", "email": "kabir@student.com", "password": "pass123" },
+  { "id": "p1", "name": "Exam Proctor", "email": "proctor@athena.com", "password": "proctor123", "role": "proctor" }
 ]

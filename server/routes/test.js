@@ -38,7 +38,7 @@ export function testRoutes({ dataDir, now }) {
     }
   }
 
-  router.use(requireAuth(dataDir))
+  router.use(requireAuth(dataDir, 'student'))
 
   // An attempt whose time ran out counts as submitted, even if the app never sent it.
   const settleAttempt = (userId, test) =>

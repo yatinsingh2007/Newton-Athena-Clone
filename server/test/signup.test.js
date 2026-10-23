@@ -25,6 +25,7 @@ test('signup creates an account and logs in', async () => {
   assert.equal(res.body.user.email, 'riya@student.com')
   assert.ok(res.body.user.id)
   assert.equal(res.body.user.password, undefined)
+  assert.equal(res.body.user.role, 'student')
   const test = await request(server.url, '/api/test', { token: res.body.token })
   assert.equal(test.status, 200)
 })
@@ -35,10 +36,10 @@ test('the new account can log in later', async () => {
   assert.equal((await login('riya@student.com', 'wrong12')).status, 401)
 })
 
-test('the account is saved in users.json alongside the demo students', async () => {
+test('the account is saved in users.json alongside the demo accounts', async () => {
   await signup(riya)
   const users = await readJson(dataDir, 'users.json', [])
-  assert.equal(users.length, 4)
+  assert.equal(users.length, 5)
   assert.equal(users.at(-1).email, 'riya@student.com')
 })
 
