@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createApi } from './lib/api.js'
+import { readStoredSession, storeSession } from './lib/session.js'
 import { Login } from './screens/Login.jsx'
 import { Result } from './screens/Result.jsx'
 import { Signup } from './screens/Signup.jsx'
@@ -8,10 +9,18 @@ import { Test } from './screens/Test.jsx'
 
 const api = createApi()
 
+// After a reload, go back to where the student was. The test itself (answers,
+// marks and the countdown) is kept on the server, so it carries on from there.
+const restored = readStoredSession()
+
 function App() {
-  const [screen, setScreen] = useState('login')
-  const [session, setSession] = useState(null)
-  const [result, setResult] = useState(null)
+  const [screen, setScreen] = useState(restored?.screen ?? 'login')
+  const [session, setSession] = useState(restored?.session ?? null)
+  const [result, setResult] = useState(restored?.result ?? null)
+
+  useEffect(() => {
+    storeSession({ session, screen, result })
+  }, [session, screen, result])
 
   const onLoggedIn = (nextSession, savedResult) => {
     setSession(nextSession)
