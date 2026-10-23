@@ -9,6 +9,7 @@ test('questions.json has 10 valid questions', async () => {
   const test = await readJson(dataDir, 'questions.json', null)
   assert.equal(test.durationMinutes, 10)
   assert.ok(test.title)
+  if (test.startsAt !== undefined) assert.ok(!Number.isNaN(Date.parse(test.startsAt)), 'startsAt is a date')
   assert.equal(test.questions.length, 10)
   assert.deepEqual(
     test.questions.map((q) => q.id),

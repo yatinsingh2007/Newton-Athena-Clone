@@ -85,7 +85,8 @@ cd server && npm run reset
 
 - **System check:** before the test, the app asks for camera and mic access through Electron IPC (`window.athena.media`, handled in `athena/app/main.js`), then shows a live preview and a mic level bar. The camera is switched off once the test starts.
 - **Test:** one question at a time, with Previous/Next, Mark for review, Clear Selection, and a question palette. Every change is saved to the server right away.
-- **Timer:** 10 minutes from the first time the test opens, based on the server's clock. When it runs out, the test submits automatically.
+- **Exam window:** `startsAt` in `server/data/questions.json` opens the test to everyone at that time, for `durationMinutes`. After logging in, students see a live countdown to the start, then the time left, all from the server's clock (re-synced every 30 seconds). The test can't be opened before the start, everyone's time ends at the same moment, and once the window is over unstarted students see it as closed and reattempts are refused. Remove `startsAt` to give each student 10 minutes from when they open the test instead.
+- **Timer:** counts down to the end of the window on the server's clock. When it runs out, the test submits automatically.
 - **Reattempt:** after submitting, a student can start a fresh attempt from the score screen; past scores are kept.
 - **Resume:** if the app closes mid-test, log in again to pick up with the same answers and the time that's left. If time ran out meanwhile, the saved answers are graded.
 - **Theme:** light and dark mode follow the OS; the toggle overrides it.
@@ -103,7 +104,7 @@ cd athena && npm test && npm run lint
 | File | Contents |
 | --- | --- |
 | `users.json` | All students: the three demo ones plus everyone who signed up (passwords hashed) |
-| `questions.json` | Test title, duration, and questions with correct answers (never sent to the app) |
+| `questions.json` | Test title, duration, start time (`startsAt`), and questions with correct answers (never sent to the app) |
 | `attempts.json` | Each student's start time, answers, review marks, and score once submitted |
 | `sessions.json` | Login tokens |
 
