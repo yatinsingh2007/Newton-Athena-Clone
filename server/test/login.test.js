@@ -18,7 +18,7 @@ test('valid login returns token and user without password', async () => {
   const res = await login({ email: 'aarav@student.com', password: 'pass123' })
   assert.equal(res.status, 200)
   assert.equal(typeof res.body.token, 'string')
-  assert.deepEqual(res.body.user, { id: 'u1', name: 'Aarav Sharma', email: 'aarav@student.com' })
+  assert.deepEqual(res.body.user, { id: 'u1', name: 'Aarav Sharma', email: 'aarav@student.com', role: 'student' })
 })
 
 test('email is case-insensitive', async () => {

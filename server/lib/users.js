@@ -4,7 +4,8 @@ import { readJson, updateJson } from './store.js'
 
 const scryptAsync = promisify(scrypt)
 
-// users.json holds every student: the demo ones and everyone who signed up.
+// users.json holds every account: the demo students, everyone who signed up,
+// and proctors (`"role": "proctor"`), who watch the test instead of taking it.
 export function allUsers(dataDir) {
   return readJson(dataDir, 'users.json', [])
 }
