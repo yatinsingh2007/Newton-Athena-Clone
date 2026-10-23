@@ -25,7 +25,7 @@ const asProctor = (path) => request(server.url, `/api/proctor${path}`, { token: 
 test('lists every student with their progress, but not proctors', async () => {
   const student = await loginAs(server.url)
   await request(server.url, '/api/test', { token: student })
-  await saveScreenshot(dataDir, 'u1', 1234, JPEG)
+  await saveScreenshot(dataDir, 'exam', 'u1', 1234, JPEG)
 
   const res = await asProctor('/students')
   assert.equal(res.status, 200)
@@ -41,8 +41,8 @@ test('lists every student with their progress, but not proctors', async () => {
 })
 
 test("lists and serves a student's screenshots", async () => {
-  await saveScreenshot(dataDir, 'u1', 1000, JPEG)
-  await saveScreenshot(dataDir, 'u1', 2000, JPEG)
+  await saveScreenshot(dataDir, 'exam', 'u1', 1000, JPEG)
+  await saveScreenshot(dataDir, 'exam', 'u1', 2000, JPEG)
   assert.deepEqual((await asProctor('/students/u1/screens')).body.screenshots, [1000, 2000])
 
   const res = await fetch(`${server.url}/api/proctor/students/u1/screens/2000`, {

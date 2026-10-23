@@ -1,19 +1,25 @@
 import { readJson, updateJson } from './store.js'
 import { gradeAnswers } from './grade.js'
+import { DEFAULT_TEST_ID } from './tests.js'
 
 // Extra time after the deadline so the client's 0:00 auto-submit still lands.
 export const GRACE_MS = 10_000
 
-export async function findAttempt(dataDir, userId) {
+// One attempt per student per test. Attempts saved before there was more than
+// one test have no testId and belong to the exam.
+export const testIdOf = (attempt) => attempt.testId ?? DEFAULT_TEST_ID
+const isFor = (userId, testId) => (a) => a.userId === userId && testIdOf(a) === testId
+
+export async function findAttempt(dataDir, userId, testId = DEFAULT_TEST_ID) {
   const attempts = await readJson(dataDir, 'attempts.json', [])
-  return attempts.find((a) => a.userId === userId)
+  return attempts.find(isFor(userId, testId))
 }
 
 // Runs fn(attempt) with attempts.json locked, so each check-then-write is atomic.
-// fn returns { next?, value }; `next` replaces this student's attempt.
-export function updateAttempt(dataDir, userId, fn) {
+// fn returns { next?, value }; `next` replaces this student's attempt at that test.
+export function updateAttempt(dataDir, userId, testId, fn) {
   return updateJson(dataDir, 'attempts.json', [], async (attempts) => {
-    const index = attempts.findIndex((a) => a.userId === userId)
+    const index = attempts.findIndex(isFor(userId, testId))
     const { next, value } = await fn(index === -1 ? undefined : attempts[index])
     if (next === undefined) return { value }
     const updated = [...attempts]
@@ -24,7 +30,7 @@ export function updateAttempt(dataDir, userId, fn) {
 }
 
 export function saveAttempt(dataDir, attempt) {
-  return updateAttempt(dataDir, attempt.userId, () => ({ next: attempt }))
+  return updateAttempt(dataDir, attempt.userId, testIdOf(attempt), () => ({ next: attempt }))
 }
 
 // With `startsAt` in questions.json the test is open to everyone at the same
@@ -82,8 +88,24 @@ export function finalizeAttempt(attempt, questions, now) {
 // A not-yet-opened attempt (after a retake) has no start time.
 export const isStarted = (attempt) => attempt?.startedAt != null
 
-export function freshAttempt(userId, startedAt, history = []) {
-  return { userId, startedAt, answers: {}, marked: [], away: [], submittedAt: null, score: null, total: null, history }
+export function freshAttempt(userId, testId, startedAt, history = []) {
+  return {
+    userId,
+    testId,
+    startedAt,
+    answers: {},
+    marked: [],
+    away: [],
+    submittedAt: null,
+    score: null,
+    total: null,
+    history,
+  }
+}
+
+export function attemptStatus(attempt) {
+  if (!isStarted(attempt)) return 'not_started'
+  return attempt.submittedAt ? 'submitted' : 'in_progress'
 }
 
 // Times the student left the test window, as { leftAt, backAt } (backAt is
@@ -104,7 +126,8 @@ export function recordAway(attempt, away, now) {
 // Moves a finished attempt into history; the next GET /api/test opens a new one.
 export function retakeAttempt(attempt) {
   const { score, total, submittedAt } = attempt
-  return freshAttempt(attempt.userId, null, [...(attempt.history ?? []), { score, total, submittedAt }])
+  const history = [...(attempt.history ?? []), { score, total, submittedAt }]
+  return freshAttempt(attempt.userId, testIdOf(attempt), null, history)
 }
 
 export function resultOf({ score, total, submittedAt, history = [] }) {

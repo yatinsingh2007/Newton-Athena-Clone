@@ -1,5 +1,7 @@
 import { test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import { createApp } from '../app.js'
 import { saveAttempt } from '../lib/attempts.js'
 import { fakeClock, loginAs, makeDataDir, request, startApp } from './helpers.js'
@@ -56,4 +58,24 @@ test('returns saved answers and marked', async () => {
   const res = await getTest()
   assert.deepEqual(res.body.answers, { q1: 2 })
   assert.deepEqual(res.body.marked, ['q3'])
+})
+
+test('the exam is also at /api/tests/exam, sharing one attempt', async () => {
+  const first = await getTest()
+  now.advance(60_000)
+  const res = await request(server.url, '/api/tests/exam/test', { token })
+  assert.equal(res.status, 200)
+  assert.equal(res.body.startedAt, first.body.startedAt)
+})
+
+test('an unknown test is 404', async () => {
+  for (const id of ['nope', '__proto__', 'constructor']) {
+    assert.equal((await request(server.url, `/api/tests/${id}/test`, { token })).status, 404, id)
+  }
+})
+
+test('a new attempt records which test it is for', async () => {
+  await getTest()
+  const attempts = JSON.parse(await readFile(path.join(dataDir, 'attempts.json'), 'utf8'))
+  assert.equal(attempts[0].testId, 'exam')
 })
