@@ -59,19 +59,27 @@ npx vercel deploy --prod
 
 Builds of the app (`npm run build`, `npm start`, `npm run dist`) talk to that URL, set in `athena/.env.production` as `VITE_API_URL`. `npm run dev` keeps using the local server on port 4747.
 
-**This deployment is a demo.** Vercel only lets the server write to a temporary folder that is wiped whenever Vercel starts a fresh instance. The demo logins and questions always work, but sign-ups, answers and scores can disappear. For data that lasts, run the server somewhere with a persistent disk.
+**This deployment is a demo.** Vercel only lets the server write to a temporary folder that is wiped whenever Vercel starts a fresh instance. The demo logins and questions always work, but sign-ups, answers, scores and screenshots can disappear. Vercel can also run several instances at once, each with its own folder, so a proctor may not see every screenshot. For data that lasts, run the server somewhere with a persistent disk.
 
 ## Accounts
 
 Students can create their own account from **Create an account** on the login screen (name, email, password of 6+ characters). New accounts are added to `server/data/users.json` with hashed passwords.
 
-There are also three demo logins:
+There are also three demo student logins:
 
 | Email | Password |
 | --- | --- |
 | aarav@student.com | pass123 |
 | diya@student.com | pass123 |
 | kabir@student.com | pass123 |
+
+And a demo proctor, who sees the proctor dashboard instead of the test:
+
+| Email | Password |
+| --- | --- |
+| proctor@athena.com | proctor123 |
+
+A proctor is any account in `users.json` with `"role": "proctor"`.
 
 After submitting, students can press **Reattempt test** on the score screen to take the test again. Earlier scores are listed under the latest one.
 
@@ -85,7 +93,8 @@ cd server && npm run reset
 
 - **Home:** after logging in, students see when the test is live (date and time window), a live countdown, and whether they've completed it, with their score. From there they start, resume, or view their result.
 - **System check:** before the test, the app asks for camera and mic access through Electron IPC (`window.athena.media`, handled in `athena/app/main.js`), then shows a live preview and a mic level bar. The camera is switched off once the test starts.
-- **Screen share:** the student then shares their whole screen (`getDisplayMedia`, answered in `athena/app/main.js` with the primary screen and no picker). Sharing stays on for the whole test; if it stops, or after a reload, the questions are hidden until the screen is shared again, while the timer keeps running. It stops on submit or logout. On macOS, Athena needs **Screen Recording** permission (System Settings → Privacy & Security), and must be reopened after it's turned on. The stream stays in the app: nothing is recorded or sent to the server.
+- **Screen share:** the student then shares their whole screen (`getDisplayMedia`, answered in `athena/app/main.js` with the primary screen and no picker). Sharing stays on for the whole test; if it stops, or after a reload, the questions are hidden until the screen is shared again, while the timer keeps running. It stops on submit or logout. On macOS, Athena needs **Screen Recording** permission (System Settings → Privacy & Security), and must be reopened after it's turned on. While the test is on screen, the app sends a screenshot of it (JPEG, at most 1280px wide) every 15 seconds to `POST /api/screen`.
+- **Proctor dashboard:** a proctor who logs in sees the exam window, every student's progress, and their latest screenshot, refreshed every 10 seconds. A student in the test whose screen hasn't come through for 45 seconds is flagged in red. Click a student to see their latest screen large, with earlier screenshots below.
 - **Test:** one question at a time, with Previous/Next, Mark for review, Clear Selection, and a question palette. Every change is saved to the server right away.
 - **Exam window:** `startsAt` in `server/data/questions.json` opens the test to everyone at that time, for `durationMinutes`. After logging in, students see a live countdown to the start, then the time left, all from the server's clock (re-synced every 30 seconds). The test can't be opened before the start, everyone's time ends at the same moment, and once the window is over unstarted students see it as closed and reattempts are refused. Remove `startsAt` to give each student 10 minutes from when they open the test instead.
 - **Timer:** counts down to the end of the window on the server's clock. When it runs out, the test submits automatically.
@@ -109,5 +118,6 @@ cd athena && npm test && npm run lint
 | `questions.json` | Test title, duration, start time (`startsAt`), and questions with correct answers (never sent to the app) |
 | `attempts.json` | Each student's start time, answers, review marks, and score once submitted |
 | `sessions.json` | Login tokens |
+| `screens/<userId>/<time>.jpg` | Screenshots of each student's screen during the test (newest 120 kept) |
 
-`attempts.json` and `sessions.json` are created by the server as it runs and are not tracked in git. `npm run reset` clears attempts and logins but keeps accounts.
+`attempts.json`, `sessions.json` and `screens/` are created by the server as it runs and are not tracked in git. `npm run reset` clears attempts, logins and screenshots but keeps accounts.
