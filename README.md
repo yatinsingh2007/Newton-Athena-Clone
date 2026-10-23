@@ -23,6 +23,20 @@ npm run dev        # opens the Electron window
 
 To run the built app instead of the dev server: `npm run build && npm start` in `athena/`.
 
+## Build the Mac app (.dmg)
+
+```bash
+cd athena
+npm install
+npm run dist
+```
+
+This builds the app and writes `athena/release/Athena-1.0.0-arm64.dmg` (Apple Silicon Macs).
+
+To install, open the `.dmg` and drag **Athena** into **Applications**. The app isn't signed with an Apple Developer certificate, so the first time you open it macOS will block it. Right-click Athena in Applications, choose **Open**, then **Open** again. After that it opens normally.
+
+The `.dmg` contains only the desktop app. The exam server still has to be running (`cd server && npm run dev`) for login and tests to work.
+
 ## Accounts
 
 Students can create their own account from **Create an account** on the login screen (name, email, password of 6+ characters). New accounts are added to `server/data/users.json` with hashed passwords.
