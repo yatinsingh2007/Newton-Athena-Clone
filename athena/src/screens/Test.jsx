@@ -1,6 +1,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { QuestionPalette } from '../components/QuestionPalette.jsx'
 import { QuestionText } from '../components/QuestionText.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
+import { questionStatus } from '../lib/questionStatus.js'
 import './Test.css'
 
 const LETTERS = ['A', 'B', 'C', 'D']
@@ -11,7 +13,10 @@ export function Test({ api, session, onSubmitted }) {
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [marked, setMarked] = useState([])
+  const [visited, setVisited] = useState(() => new Set())
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
+  const paletteButton = useRef(null)
   const latest = useRef({ answers: {}, marked: [] })
   const saveChain = useRef(Promise.resolve())
 
@@ -27,6 +32,8 @@ export function Test({ api, session, onSubmitted }) {
         setAnswers(data.answers)
         setMarked(data.marked)
         latest.current = { answers: data.answers, marked: data.marked }
+        // Resuming: anything answered or marked earlier counts as visited.
+        setVisited(new Set([data.questions[0].id, ...Object.keys(data.answers), ...data.marked]))
       },
       (err) => !cancelled && setLoadError(err.message),
     )
@@ -63,16 +70,28 @@ export function Test({ api, session, onSubmitted }) {
     })
   }
 
-  const goTo = (nextIndex) => setIndex(nextIndex)
-  const choose = (optionIndex) => persist({ ...answers, [question.id]: optionIndex }, marked)
+  const goTo = (nextIndex) => {
+    setIndex(nextIndex)
+    setVisited((v) => new Set(v).add(test.questions[nextIndex].id))
+  }
+  const statusOf = (qid) => questionStatus(qid, { answers, marked, visited })
+  // Build on latest.current, not render state, so quick successive clicks
+  // never drop each other's changes.
+  const choose = (optionIndex) =>
+    persist({ ...latest.current.answers, [question.id]: optionIndex }, latest.current.marked)
   const clearSelection = () => {
-    const rest = { ...answers }
+    const rest = { ...latest.current.answers }
     delete rest[question.id]
-    persist(rest, marked)
+    persist(rest, latest.current.marked)
   }
   const isMarked = marked.includes(question.id)
-  const toggleMark = () =>
-    persist(answers, isMarked ? marked.filter((id) => id !== question.id) : [...marked, question.id])
+  const toggleMark = () => {
+    const current = latest.current.marked
+    const next = current.includes(question.id)
+      ? current.filter((id) => id !== question.id)
+      : [...current, question.id]
+    persist(latest.current.answers, next)
+  }
 
   return (
     <div className="test-shell">
@@ -134,6 +153,34 @@ export function Test({ api, session, onSubmitted }) {
           </svg>
           Previous
         </button>
+        <button
+          type="button"
+          ref={paletteButton}
+          className="btn palette-toggle"
+          aria-label="Show all questions"
+          aria-expanded={paletteOpen}
+          onClick={() => setPaletteOpen((open) => !open)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="3" y="3" width="8" height="8" rx="2" />
+            <rect x="13" y="3" width="8" height="8" rx="2" />
+            <rect x="3" y="13" width="8" height="8" rx="2" />
+            <rect x="13" y="13" width="8" height="8" rx="2" />
+          </svg>
+        </button>
+        {paletteOpen && (
+          <QuestionPalette
+            questions={test.questions}
+            current={index}
+            statusOf={statusOf}
+            anchorRef={paletteButton}
+            onClose={() => setPaletteOpen(false)}
+            onJump={(i) => {
+              goTo(i)
+              setPaletteOpen(false)
+            }}
+          />
+        )}
         {saveFailed && <span className="save-note">Not saved — will retry</span>}
         <button type="button" className="btn btn-primary" onClick={() => goTo(index + 1)} disabled={index === total - 1}>
           Next
