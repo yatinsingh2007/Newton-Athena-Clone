@@ -6,27 +6,31 @@ import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { Timer } from '../components/Timer.jsx'
 import { questionStatus, summarize } from '../lib/questionStatus.js'
 import { createSaveQueue } from '../lib/saveQueue.js'
-import { autoSubmitDue, remainingMs, SUBMIT_RETRY_MS } from '../lib/timer.js'
+import {
+  autoSubmitDue,
+  formatClock,
+  monotonicNow,
+  remainingMs,
+  RESYNC_MS,
+  SUBMIT_RETRY_MS,
+} from '../lib/timer.js'
 import './Test.css'
 
 const LETTERS = ['A', 'B', 'C', 'D']
 
-// A monotonic clock: changing the computer's time can't move the countdown.
-const monotonicNow = () => performance.now()
+// `data` is a server reply with `now`, plus `fetchedAt`: when it arrived.
+const msUntil = (at, data, clientNow) =>
+  remainingMs({ endsAt: at, serverNow: data.now, clientNowAtFetch: data.fetchedAt, clientNow })
 
-const timeLeft = (test, clientNow) =>
-  remainingMs({
-    startedAt: test.startedAt,
-    durationMinutes: test.durationMinutes,
-    serverNow: test.now,
-    clientNowAtFetch: test.fetchedAt,
-    clientNow,
-  })
+const timeLeft = (test, clientNow) => msUntil(test.endsAt, test, clientNow)
 
 export function Test({ api, session, onSubmitted, onSessionLost }) {
   const [test, setTest] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
+  // Set while the exam window hasn't opened yet, or once it has closed.
+  const [waiting, setWaiting] = useState(null)
+  const [closed, setClosed] = useState(false)
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [marked, setMarked] = useState([])
@@ -52,6 +56,8 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
       (data) => {
         if (cancelled) return
         if (data.status === 'submitted') return finished(data.result)
+        if (data.status === 'not_started') return setWaiting({ ...data, fetchedAt: monotonicNow() })
+        if (data.status === 'closed') return setClosed(true)
         setTest({ ...data, fetchedAt: monotonicNow() })
         setAnswers(data.answers)
         setMarked(data.marked)
@@ -73,8 +79,35 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
 
   function retryLoad() {
     setLoadError(null)
+    setWaiting(null)
     setLoadAttempt((n) => n + 1)
   }
+
+  // Waiting for the window to open: count down, then load the test at the start time.
+  const onWaitTick = useEffectEvent(() => {
+    const now = monotonicNow()
+    setClock(now)
+    if (msUntil(waiting.startsAt, waiting, now) === 0) retryLoad()
+  })
+
+  useEffect(() => {
+    if (!waiting) return
+    const id = setInterval(onWaitTick, 500)
+    return () => clearInterval(id)
+  }, [waiting])
+
+  // Re-read the server's clock now and then, so the countdown keeps matching it.
+  const hasTest = test !== null
+  useEffect(() => {
+    if (!hasTest) return
+    const id = setInterval(() => {
+      api.getExam(session.token).then(
+        ({ now }) => setTest((current) => current && { ...current, now, fetchedAt: monotonicNow() }),
+        () => {},
+      )
+    }, RESYNC_MS)
+    return () => clearInterval(id)
+  }, [api, session.token, hasTest])
 
   // Lock the window (full screen, no switching apps or desktops) for the whole
   // test; leaving this screen — submit, logout, lost session — unlocks it.
@@ -136,6 +169,30 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
           <button type="button" className="btn btn-primary" onClick={retryLoad}>
             Try again
           </button>
+        </div>
+      </div>
+    )
+  }
+  if (closed) {
+    return (
+      <div className="test-status">
+        <div className="test-status-box">
+          <p>The test window has closed.</p>
+          <button type="button" className="btn btn-primary" onClick={() => onSessionLost()}>
+            Log out
+          </button>
+        </div>
+      </div>
+    )
+  }
+  if (waiting) {
+    return (
+      <div className="test-status">
+        <div className="test-status-box">
+          <p>{waiting.title}</p>
+          <p>
+            The test starts in <strong>{formatClock(msUntil(waiting.startsAt, waiting, clock))}</strong>
+          </p>
         </div>
       </div>
     )

@@ -234,3 +234,18 @@ input {
   justify-content: flex-end;
   gap: 12px;
 }
+
+.exam-clock {
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-clock[data-phase='closed'] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}

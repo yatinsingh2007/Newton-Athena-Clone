@@ -39,6 +39,7 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
     login: (email, password) => call('/api/login', { method: 'POST', body: { email, password } }),
     signup: (name, email, password) =>
       call('/api/signup', { method: 'POST', body: { name, email, password } }),
+    getExam: (token) => call('/api/exam', { token }),
     getTest: (token) => call('/api/test', { token }),
     saveAttempt: (token, { answers, marked }) =>
       call('/api/attempt', { method: 'PUT', token, body: { answers, marked } }),
