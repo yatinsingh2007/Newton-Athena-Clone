@@ -4,10 +4,12 @@ A desktop clone of Newton School's Athena exam app. A student logs in or signs u
 
 ## Download
 
-**[⬇ Download Athena for Mac (Apple Silicon)](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases/download/v1.0.0/Athena-1.0.0-arm64.dmg)** · [All releases](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases)
+**[⬇ Download Athena for Mac (Apple Silicon)](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases/latest/download/Athena-arm64.dmg)** · [All releases](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases)
 
 1. Open the `.dmg` and drag **Athena** into **Applications**.
-2. The app isn't signed with an Apple Developer certificate, so macOS blocks it the first time. Right-click Athena in Applications, choose **Open**, then **Open** again. After that it opens normally.
+2. Open Athena. Because the app isn't notarized by Apple, macOS says it can't verify the developer. Click **Done**, then go to **System Settings → Privacy & Security**, scroll down to the message about Athena, and click **Open Anyway**. You only need to do this once.
+
+   Or, in Terminal: `xattr -dr com.apple.quarantine /Applications/Athena.app`
 3. Log in with a demo account (see [Accounts](#accounts)) or create your own.
 
 The downloaded app uses the [demo server on Vercel](#deployed-server-vercel), so there's nothing else to run.
@@ -43,7 +45,7 @@ npm install
 npm run dist
 ```
 
-This builds the app and writes `athena/release/Athena-1.0.0-arm64.dmg` (Apple Silicon Macs). Install it the same way as the [download](#download). It talks to the deployed server on Vercel, so it works without running the server locally.
+This builds the app and writes `athena/release/Athena-arm64.dmg` (Apple Silicon Macs). The app is ad-hoc signed, which needs no Apple Developer account. Install it the same way as the [download](#download). It talks to the deployed server on Vercel, so it works without running the server locally.
 
 To publish a new version, bump `version` in `athena/package.json`, run `npm run dist`, and attach the new `.dmg` to a [GitHub release](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases).
 
