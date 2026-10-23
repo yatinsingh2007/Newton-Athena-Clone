@@ -118,8 +118,8 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
     return () => clearInterval(id)
   }, [api, session.token, hasTest])
 
-  // Lock the window (full screen, no switching apps or desktops) for the whole
-  // test; leaving this screen — submit, logout, lost session — unlocks it.
+  // The app is locked from launch; during the test it also can't quit or reload.
+  // Leaving this screen (submit, logout, lost session) lifts just that.
   useEffect(() => {
     const exam = window.athena?.exam
     exam?.lock()
