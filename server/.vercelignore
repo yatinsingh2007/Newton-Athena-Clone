@@ -1,0 +1,4 @@
+node_modules
+test
+data/attempts.json
+data/sessions.json
