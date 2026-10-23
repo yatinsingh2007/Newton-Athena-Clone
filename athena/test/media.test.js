@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { getMediaStatus, registerMediaIpc, requestMediaAccess, settingsUrl } from './media.js'
+import { getMediaStatus, registerMediaIpc, requestMediaAccess, settingsUrl } from '../app/main.js'
 
 function fakePrefs({ camera = 'granted', microphone = 'granted', ask = {} } = {}) {
   const asked = []

@@ -39,7 +39,7 @@ cd server && npm run reset
 
 ## How it works
 
-- **System check:** before the test, the app asks for camera and mic access through Electron IPC (`window.athena.media`, handled in `athena/app/media.js`), then shows a live preview and a mic level bar. The camera is switched off once the test starts.
+- **System check:** before the test, the app asks for camera and mic access through Electron IPC (`window.athena.media`, handled in `athena/app/main.js`), then shows a live preview and a mic level bar. The camera is switched off once the test starts.
 - **Test:** one question at a time, with Previous/Next, Mark for review, Clear Selection, and a question palette. Every change is saved to the server right away.
 - **Timer:** 10 minutes from the first time the test opens, based on the server's clock. When it runs out, the test submits automatically.
 - **Resume:** if the app closes mid-test, log in again to pick up with the same answers and the time that's left. If time ran out meanwhile, the saved answers are graded.

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isTrustedUrl } from './security.js'
+import { isTrustedUrl } from '../app/main.js'
 
 const dev = 'http://localhost:5173'
 
