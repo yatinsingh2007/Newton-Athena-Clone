@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useScreenShare } from './hooks/useScreenShare.js'
 import { createApi } from './lib/api.js'
 import { readStoredSession, storeSession } from './lib/session.js'
 import { Home } from './screens/Home.jsx'
@@ -18,6 +19,7 @@ function App() {
   const [screen, setScreen] = useState(restored?.screen ?? 'login')
   const [session, setSession] = useState(restored?.session ?? null)
   const [result, setResult] = useState(restored?.result ?? null)
+  const screenShare = useScreenShare()
 
   useEffect(() => {
     storeSession({ session, screen, result })
@@ -38,10 +40,12 @@ function App() {
     setScreen('check')
   }
   const onSubmitted = (nextResult) => {
+    screenShare.stop()
     setResult(nextResult)
     setScreen('result')
   }
   const onLogout = () => {
+    screenShare.stop()
     setSession(null)
     setResult(null)
     setScreen('login')
@@ -58,7 +62,9 @@ function App() {
       />
     )
   }
-  if (screen === 'check') return <SystemCheck api={api} session={session} onReady={onReady} />
+  if (screen === 'check') return (
+      <SystemCheck api={api} session={session} screenShare={screenShare} onReady={onReady} />
+    )
   if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} onSessionLost={onLogout} />
   if (screen === 'result') {
     return (
