@@ -1,5 +1,6 @@
 import express from 'express'
 import { authRoutes } from './routes/auth.js'
+import { testRoutes } from './routes/test.js'
 
 function cors(req, res, next) {
   res.set('Access-Control-Allow-Origin', '*')
@@ -16,6 +17,7 @@ export function createApp({ dataDir, now = () => Date.now() }) {
 
   app.get('/api/health', (req, res) => res.json({ ok: true }))
   app.use('/api', authRoutes({ dataDir }))
+  app.use('/api', testRoutes({ dataDir, now }))
 
   return app
 }

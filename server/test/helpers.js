@@ -35,3 +35,18 @@ export async function request(baseUrl, urlPath, { method = 'GET', token, body } 
   const text = await res.text()
   return { status: res.status, body: text ? JSON.parse(text) : null }
 }
+
+export async function loginAs(baseUrl, email = 'aarav@student.com') {
+  const res = await request(baseUrl, '/api/login', {
+    method: 'POST',
+    body: { email, password: 'pass123' },
+  })
+  return res.body.token
+}
+
+export function fakeClock(start = Date.UTC(2026, 9, 23, 10, 0, 0)) {
+  let current = start
+  const now = () => current
+  now.advance = (ms) => { current += ms }
+  return now
+}
