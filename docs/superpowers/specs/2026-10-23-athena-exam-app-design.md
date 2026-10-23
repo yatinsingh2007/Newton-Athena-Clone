@@ -165,6 +165,10 @@ that clears `attempts.json` and `sessions.json`, since each seeded student can o
   URL in development and `dist/index.html` in production, with
   `contextIsolation: true`, `nodeIntegration: false`.
 - Media permission handler as described above.
+- Native abilities (OS camera/mic permission status and prompts, opening
+  System Settings) go through IPC: a `contextBridge` preload exposes
+  `window.athena.media.*`, handled in main with `ipcMain.handle` using
+  `systemPreferences` (decided by the user).
 - Vite `base: './'` so the built `dist/index.html` loads from disk; the
   production path should be checked once with a build (my call).
 - `npm run dev` in `athena/` runs Vite and Electron together via

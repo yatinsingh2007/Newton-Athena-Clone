@@ -18,7 +18,8 @@
 - One attempt per student. `startedAt` is set on the first `GET /api/test` and never reset.
 - The camera is shown only on the System Check screen; the stream is stopped before the test starts.
 - Server port 4000; Vite dev port 5173 (`strictPort`); CORS allows all origins.
-- Electron: `contextIsolation: true`, `nodeIntegration: false`; grant `media` permission in the session handler.
+- Electron: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`; grant `media` permission in the session handler.
+- Native abilities go through IPC: the renderer never touches Node/Electron APIs directly. It calls `window.athena.*`, exposed by `app/preload.cjs` via `contextBridge`, which `ipcRenderer.invoke`s channels handled in main with `ipcMain.handle`. Channel names: `media:status`, `media:request`, `media:open-settings`.
 - Light + dark theme via CSS custom properties; default follows `prefers-color-scheme`; toggle override stored in `localStorage` key `athena-theme`.
 - The plan is exactly 20 commits (Tasks 1–20), one per task, on `main`. Each commit leaves the app runnable. Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Visual reference: `~/Desktop/Screenshot 2026-10-23 at 1.38.27 AM.png`. The bug icon is omitted.
@@ -54,7 +55,9 @@ athena/
   package.json            main: app/main.js; scripts dev/build/start/test
   vite.config.js          base './', server.port 5173 strictPort
   eslint.config.js        node globals for app/** and **/*.test.js
-  app/main.js             Electron main process
+  app/main.js             Electron main process (window, permissions, IPC registration)
+  app/preload.cjs         contextBridge → window.athena (CommonJS: sandboxed preloads can't be ESM)
+  app/media.js            OS camera/mic access logic, injectable for tests (+ media.test.js)
   src/main.jsx, src/App.jsx, src/index.css
   src/lib/{api,theme,inlineCode,questionStatus,timer,mediaErrors}.js (+ .test.js)
   src/hooks/useTheme.js
@@ -169,15 +172,16 @@ Delete: `server/questions.json` (moved to `server/data/`), `athena/src/App.css`,
 
 ### Task 9: Electron shell and dev workflow
 
-**Files:** Modify `athena/package.json`, `athena/vite.config.js`, `athena/eslint.config.js`, `athena/index.html` (title `Athena`), `athena/src/App.jsx` (placeholder `<h1>Athena</h1>`), `athena/src/index.css` (strip the starter styles to a minimal reset). Create content in `athena/app/main.js`. Delete starter assets (see File Structure).
+**Files:** Modify `athena/package.json`, `athena/vite.config.js`, `athena/eslint.config.js`, `athena/index.html` (title `Athena`), `athena/src/App.jsx` (placeholder `<h1>Athena</h1>` plus `window.athena?.platform`), `athena/src/index.css` (strip the starter styles to a minimal reset). Create content in `athena/app/main.js` and create `athena/app/preload.cjs`. Delete starter assets (see File Structure).
 
 **Interfaces:**
-- `package.json`: `"main": "app/main.js"`; scripts `"dev": "concurrently -k -n vite,electron \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\""`, `"build": "vite build"`, `"start": "electron ."`, `"test": "node --test src/lib"`.
-- `main.js` (ESM): a 1280×800 window with `minWidth 900`, `minHeight 650` and `autoHideMenuBar`. It loads `process.env.VITE_DEV_SERVER_URL` if set, else `dist/index.html` (path resolved from `import.meta.dirname`). The handler is `session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => cb(permission === 'media'))`, plus `setPermissionCheckHandler` returning true for `media`. Quit when all windows close, except on macOS.
+- `package.json`: `"main": "app/main.js"`; scripts `"dev": "concurrently -k -n vite,electron \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\""`, `"build": "vite build"`, `"start": "electron ."`, `"test": "node --test src/lib app"`.
+- `main.js` (ESM): a 1280×800 window with `minWidth 900`, `minHeight 650` and `autoHideMenuBar`. It loads `process.env.VITE_DEV_SERVER_URL` if set, else `dist/index.html` (path resolved from `import.meta.dirname`). The handler is `session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => cb(permission === 'media'))`, plus `setPermissionCheckHandler` returning true for `media`. Quit when all windows close, except on macOS. `webPreferences.preload` points at `app/preload.cjs`.
+- `preload.cjs`: `contextBridge.exposeInMainWorld('athena', { platform: process.platform })`. Task 13 adds the media methods.
 - `vite.config.js`: add `base: './'`, `server: { port: 5173, strictPort: true }`.
 - `eslint.config.js`: a block for `app/**/*.js` and `**/*.test.js` with `globals.node`.
 
-- [ ] **Step 1:** `npm run dev` in `athena/` → an Electron window opens showing "Athena" with hot reload.
+- [ ] **Step 1:** `npm run dev` in `athena/` → an Electron window opens showing "Athena" and the platform string (which proves the preload bridge works), with hot reload.
 - [ ] **Step 2:** `npm run build && npm start` → the same page loads from `dist/` with no blank screen or console 404s.
 - [ ] **Step 3:** `npm run lint` → clean.
 - [ ] **Step 4:** Commit `feat(app): wire electron shell to vite dev server`.
@@ -220,15 +224,20 @@ Delete: `server/questions.json` (moved to `server/data/`), `athena/src/App.css`,
 
 ### Task 13: System check — camera preview
 
-**Files:** Create `src/screens/SystemCheck.jsx`, `src/screens/SystemCheck.css`, `src/lib/mediaErrors.js`, `src/lib/mediaErrors.test.js`. Modify `src/App.jsx`.
+**Files:** Create `src/screens/SystemCheck.jsx`, `src/screens/SystemCheck.css`, `src/lib/mediaErrors.js`, `src/lib/mediaErrors.test.js`, `app/media.js`, `app/media.test.js`. Modify `src/App.jsx`, `app/main.js`, `app/preload.cjs`.
 
 **Interfaces:**
 - `mediaErrorMessage(errorName: string) => string`: `NotAllowedError` → "Camera and microphone access was blocked. Allow access and try again."; `NotFoundError` → "No camera or microphone was found."; `NotReadableError` → "Your camera or microphone is being used by another app."; anything else → "Could not start camera and microphone."
-- `<SystemCheck user onReady />`: holds a `stream` state. The "Allow camera & microphone" button calls `getUserMedia({ video: true, audio: true })` and attaches the stream to a mirrored `<video autoPlay muted playsInline>`. A status row shows Camera ✓ / Microphone ✓. Errors show the message and a "Try again" button. Stop all tracks on unmount.
+- `app/media.js` (main process, `systemPreferences` and `shell` injected so it's testable):
+  - `getMediaStatus({ platform, systemPreferences }) => Promise<{ camera, microphone }>`. Each value is `'granted'|'denied'|'restricted'|'not-determined'|'unknown'`. On `darwin` and `win32` it uses `systemPreferences.getMediaAccessStatus('camera'|'microphone')`; elsewhere it returns `'granted'` for both, since Linux has no OS-level gate.
+  - `requestMediaAccess({ platform, systemPreferences }) => Promise<{ camera, microphone, granted: boolean }>`. On `darwin` it awaits `systemPreferences.askForMediaAccess('camera')`, then `('microphone')`, which shows the OS prompt only on first use. Elsewhere it returns the status. `granted` is true only if both are `'granted'`.
+  - `registerMediaIpc({ ipcMain, systemPreferences, shell, platform })` handles `media:status`, `media:request`, and `media:open-settings`. On `darwin`, `media:open-settings` opens `x-apple.systempreferences:com.apple.preference.security?Privacy_Camera`; on `win32` it opens `ms-settings:privacy-webcam`.
+- `preload.cjs` adds `media: { getStatus: () => ipcRenderer.invoke('media:status'), request: () => ipcRenderer.invoke('media:request'), openSettings: () => ipcRenderer.invoke('media:open-settings') }` to `window.athena`.
+- `<SystemCheck user onReady />`: holds a `stream` state. On mount it calls `window.athena.media.getStatus()` to show the current state. The "Allow camera & microphone" button first calls `window.athena.media.request()` over IPC. If `granted` is false, it shows the `NotAllowedError` message with an "Open System Settings" button (which calls `media.openSettings()`) and "Try again". If granted, it calls `getUserMedia({ video: true, audio: true })` and attaches the stream to a mirrored `<video autoPlay muted playsInline>`. A status row shows Camera ✓ / Microphone ✓. Errors show the message and a "Try again" button. Stop all tracks on unmount.
 
-- [ ] **Step 1:** `mediaErrors.test.js` covers the four cases. FAIL → implement → PASS.
-- [ ] **Step 2:** Build the screen: heading "System check", a "Hi {name}" line, a short explanation, a 16:9 preview box with a placeholder icon before access is granted. Verify in Electron that the face appears; deny access in macOS Settings → error and Try again.
-- [ ] **Step 3:** Commit `feat(app): add system check with camera preview`.
+- [ ] **Step 1:** `mediaErrors.test.js` covers the four cases. `app/media.test.js` uses a fake `systemPreferences` to cover: `linux status is granted for both`, `darwin request asks for camera then microphone`, `granted is false if microphone is denied`, `registerMediaIpc registers the three channels` (fake `ipcMain` records `handle` calls). FAIL → implement → PASS.
+- [ ] **Step 2:** Build the screen: heading "System check", a "Hi {name}" line, a short explanation, a 16:9 preview box with a placeholder icon before access is granted. Verify in Electron that the face appears. Then deny access in macOS Settings: the error shows, and "Open System Settings" opens the Camera privacy pane.
+- [ ] **Step 3:** Commit `feat(app): add system check with camera preview and media ipc`.
 
 ### Task 14: System check — mic level and start gating
 
