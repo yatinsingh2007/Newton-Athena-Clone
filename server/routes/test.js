@@ -2,7 +2,6 @@ import { Router } from 'express'
 import {
   deadlineOf,
   finalizeAttempt,
-  findAttempt,
   GRACE_MS,
   isValidAnswers,
   isValidMarked,
@@ -102,7 +101,15 @@ export function testRoutes({ dataDir, now }) {
   })
 
   router.get('/result', async (req, res) => {
-    const attempt = await findAttempt(dataDir, req.user.id)
+    const test = await loadTest()
+    // An attempt whose time ran out counts as submitted, even if the app never sent it.
+    const attempt = await updateAttempt(dataDir, req.user.id, (current) => {
+      if (current && !current.submittedAt && isExpired(current, test)) {
+        const next = finalizeAttempt(current, test.questions, now())
+        return { next, value: next }
+      }
+      return { value: current }
+    })
     if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
     res.json(resultOf(attempt))
   })

@@ -106,3 +106,18 @@ test('submit response has no answerIndex', async () => {
   const res = await submit({ answers: correct })
   assert.ok(!JSON.stringify(res.body).includes('answerIndex'))
 })
+
+test('GET /api/result after expiry finalizes saved answers', async () => {
+  await startTest()
+  await save({ q1: correct.q1 })
+  now.advance(TEN_MIN + GRACE_MS + 1)
+  const res = await getResult()
+  assert.equal(res.status, 200)
+  assert.equal(res.body.score, 1)
+})
+
+test('GET /api/result before expiry stays 404', async () => {
+  await startTest()
+  now.advance(TEN_MIN)
+  assert.equal((await getResult()).status, 404)
+})
