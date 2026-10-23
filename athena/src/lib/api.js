@@ -49,6 +49,7 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
       call('/api/attempt', { method: 'PUT', token, body: { answers, marked } }),
     getResult: (token) => call('/api/result', { token }),
     retake: (token) => call('/api/retake', { method: 'POST', token }),
+    reportAway: (token, away) => call('/api/away', { method: 'POST', token, body: { away } }),
     uploadScreen: (token, jpeg) => call('/api/screen', { method: 'POST', token, body: jpeg }),
     proctorStudents: (token) => call('/api/proctor/students', { token }),
     proctorScreens: (token, studentId) => call(`/api/proctor/students/${studentId}/screens`, { token }),
