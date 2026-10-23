@@ -4,6 +4,9 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Relative asset paths so the built app loads from disk inside Electron.
+  base: './',
+  server: { port: 5173, strictPort: true },
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] })
