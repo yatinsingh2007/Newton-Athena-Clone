@@ -2,6 +2,10 @@
 
 A desktop clone of Newton School's Athena exam app. A student logs in or signs up, passes a camera and microphone check, takes a 10-minute, 10-question MCQ test in a locked full-screen window, and sees their score. They can reattempt the test afterwards.
 
+## Exam time
+
+**Saturday 24 October 2026, 10:00–10:10 AM IST.** The test opens for everyone at 10:00 and closes at 10:10, when any unsubmitted answers are submitted automatically. Install Athena 1.2.0 or later before then. To change the time, edit `startsAt` in `server/data/questions.json` and push (see [Exam window](#how-it-works)).
+
 ## Download
 
 **[⬇ Download Athena for Mac (Apple Silicon)](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases/latest/download/Athena-arm64.dmg)** · [All releases](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases)
@@ -96,7 +100,7 @@ cd server && npm run reset
 - **Screen share:** the student then shares their whole screen (`getDisplayMedia`, answered in `athena/app/main.js` with the primary screen and no picker). Sharing stays on for the whole test; if it stops, or after a reload, the questions are hidden until the screen is shared again, while the timer keeps running. It stops on submit or logout. On macOS, Athena needs **Screen Recording** permission (System Settings → Privacy & Security), and must be reopened after it's turned on. While the test is on screen, the app sends a screenshot of it (JPEG, at most 1280px wide) every 15 seconds to `POST /api/screen`.
 - **Proctor dashboard:** a proctor who logs in sees the exam window, every student's progress, and their latest screenshot, refreshed every 10 seconds. A student in the test whose screen hasn't come through for 45 seconds is flagged in red. Click a student to see their latest screen large, with earlier screenshots below.
 - **Test:** one question at a time, with Previous/Next, Mark for review, Clear Selection, and a question palette. Every change is saved to the server right away.
-- **Exam window:** `startsAt` in `server/data/questions.json` opens the test to everyone at that time, for `durationMinutes`. After logging in, students see a live countdown to the start, then the time left, all from the server's clock (re-synced every 30 seconds). The test can't be opened before the start, everyone's time ends at the same moment, and once the window is over unstarted students see it as closed and reattempts are refused. Remove `startsAt` to give each student 10 minutes from when they open the test instead.
+- **Exam window:** `startsAt` in `server/data/questions.json` opens the test to everyone at that time, for `durationMinutes`. After logging in, students see a live countdown to the start, then the time left, all from the server's clock (re-synced every 30 seconds). The test can't be opened before the start, everyone's time ends at the same moment, and once the window is over unstarted students see it as closed and reattempts are refused. It's currently `2026-10-24T10:00:00+05:30`. Remove `startsAt` to give each student 10 minutes from when they open the test instead.
 - **Timer:** counts down to the end of the window on the server's clock. When it runs out, the test submits automatically.
 - **Reattempt:** after submitting, a student can start a fresh attempt from the score screen; past scores are kept.
 - **Resume:** if the app closes mid-test, log in again to pick up with the same answers and the time that's left. If time ran out meanwhile, the saved answers are graded.
