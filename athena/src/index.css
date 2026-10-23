@@ -9,6 +9,7 @@
   --border-strong: #d2d2da;
   --accent: #5b3fd6;
   --accent-soft: #f1edff;
+  --accent-text: #ffffff;
   --success: #3a9a62;
   --success-hover: #318654;
   --primary: #141416;
@@ -32,6 +33,7 @@
   --border-strong: #3a3a45;
   --accent: #a48bff;
   --accent-soft: #241d42;
+  --accent-text: #120d24;
   --success: #3fae6e;
   --success-hover: #4cc07d;
   --primary: #f1f1f4;
