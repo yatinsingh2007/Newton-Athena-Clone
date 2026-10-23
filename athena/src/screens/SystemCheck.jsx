@@ -4,6 +4,7 @@ import { MicMeter } from '../components/MicMeter.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { useExamClock } from '../hooks/useExamClock.js'
 import { deviceStatusLabel, mediaErrorMessage } from '../lib/mediaErrors.js'
+import { screenErrorMessage, screenStatusLabel } from '../lib/screenShare.js'
 import { formatClock } from '../lib/timer.js'
 import './SystemCheck.css'
 
@@ -11,7 +12,7 @@ const media = window.athena?.media
 
 const isLive = (track) => track?.readyState === 'live'
 
-export function SystemCheck({ api, session, onReady }) {
+export function SystemCheck({ api, session, screenShare, onReady }) {
   const { user } = session
   const { clock } = useExamClock(api, session.token)
   const videoRef = useRef(null)
@@ -65,7 +66,8 @@ export function SystemCheck({ api, session, onReady }) {
 
   const cameraOk = isLive(stream?.getVideoTracks()[0])
   const micOk = isLive(stream?.getAudioTracks()[0])
-  const ready = cameraOk && micOk
+  const devicesOk = cameraOk && micOk
+  const ready = devicesOk && screenShare.live
   // The test can only be opened while its window is live (or if it has none).
   const phase = clock?.phase ?? 'anytime'
   const canStart = phase === 'open' || phase === 'anytime'
@@ -84,7 +86,8 @@ export function SystemCheck({ api, session, onReady }) {
         <p className="eyebrow">System check</p>
         <h1>Check your camera and microphone</h1>
         <p className="check-intro">
-          Hi {user.name.split(' ')[0]}, both must be working before the test can start.
+          Hi {user.name.split(' ')[0]}, your camera and microphone must be working, and your
+          screen shared, before the test can start.
         </p>
 
         <ExamClock clock={clock} />
@@ -114,6 +117,11 @@ export function SystemCheck({ api, session, onReady }) {
             Microphone
             <span className="check-item-state">{deviceStatusLabel(micOk, errorName)}</span>
           </div>
+          <div className="check-item" data-ok={screenShare.live}>
+            <span className="check-dot" aria-hidden="true" />
+            Screen
+            <span className="check-item-state">{screenStatusLabel(screenShare.live, screenShare.error)}</span>
+          </div>
         </div>
 
         {micOk && (
@@ -129,9 +137,20 @@ export function SystemCheck({ api, session, onReady }) {
           </div>
         )}
 
+        {screenShare.error && (
+          <div className="check-error">
+            <p className="error-text" role="alert">{screenErrorMessage(screenShare.error)}</p>
+          </div>
+        )}
+
         <div className="check-actions">
           {osBlocked && media && (
             <button type="button" className="btn" onClick={() => media.openSettings()}>
+              Open System Settings
+            </button>
+          )}
+          {screenShare.error === 'blocked' && screenShare.openSettings && (
+            <button type="button" className="btn" onClick={() => screenShare.openSettings()}>
               Open System Settings
             </button>
           )}
@@ -142,6 +161,15 @@ export function SystemCheck({ api, session, onReady }) {
                 : phase === 'closed'
                   ? 'Test closed'
                   : 'Start Test'}
+            </button>
+          ) : devicesOk ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => screenShare.start()}
+              disabled={screenShare.pending}
+            >
+              {screenShare.pending ? 'Waiting for permission…' : 'Share your screen'}
             </button>
           ) : (
             <button type="button" className="btn btn-primary" onClick={allow} disabled={pending}>
