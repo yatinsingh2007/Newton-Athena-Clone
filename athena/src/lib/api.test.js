@@ -65,3 +65,12 @@ test('409 on submit resolves to saved result', async () => {
   const result = await createApi('http://x', impl).submit('tok', { q1: 0 })
   assert.deepEqual(result, { score: 7, total: 10, submittedAt: 1 })
 })
+
+test('signup sends name, email and password', async () => {
+  const { impl, calls } = fakeFetch({
+    'POST /api/signup': [201, { token: 't2', user: { id: 'n1' } }],
+  })
+  const data = await createApi('http://x', impl).signup('Riya', 'r@s.com', 'secret1')
+  assert.deepEqual(data, { token: 't2', user: { id: 'n1' } })
+  assert.deepEqual(JSON.parse(calls[0].body), { name: 'Riya', email: 'r@s.com', password: 'secret1' })
+})

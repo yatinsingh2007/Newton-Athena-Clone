@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createApi } from './lib/api.js'
 import { Login } from './screens/Login.jsx'
 import { Result } from './screens/Result.jsx'
+import { Signup } from './screens/Signup.jsx'
 import { SystemCheck } from './screens/SystemCheck.jsx'
 import { Test } from './screens/Test.jsx'
 
@@ -31,7 +32,10 @@ function App() {
   if (screen === 'check') return <SystemCheck user={session.user} onReady={onReady} />
   if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} onSessionLost={onLogout} />
   if (screen === 'result') return <Result user={session.user} result={result} onLogout={onLogout} />
-  return <Login api={api} onLoggedIn={onLoggedIn} />
+  if (screen === 'signup') {
+    return <Signup api={api} onSignedUp={onLoggedIn} onShowLogin={() => setScreen('login')} />
+  }
+  return <Login api={api} onLoggedIn={onLoggedIn} onShowSignup={() => setScreen('signup')} />
 }
 
 export default App

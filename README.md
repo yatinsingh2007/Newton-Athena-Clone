@@ -23,7 +23,11 @@ npm run dev        # opens the Electron window
 
 To run the built app instead of the dev server: `npm run build && npm start` in `athena/`.
 
-## Demo logins
+## Accounts
+
+Students can create their own account from **Create an account** on the login screen (name, email, password of 6+ characters). New accounts are saved in `server/data/accounts.json` with hashed passwords.
+
+There are also three demo logins:
 
 | Email | Password |
 | --- | --- |
@@ -57,9 +61,10 @@ cd athena && npm test && npm run lint
 
 | File | Contents |
 | --- | --- |
-| `users.json` | Hardcoded students |
+| `users.json` | Demo students |
+| `accounts.json` | Students who signed up (passwords hashed) |
 | `questions.json` | Test title, duration, and questions with correct answers (never sent to the app) |
 | `attempts.json` | Each student's start time, answers, review marks, and score once submitted |
 | `sessions.json` | Login tokens |
 
-`attempts.json` and `sessions.json` are created by the server as it runs and are not tracked in git.
+`accounts.json`, `attempts.json` and `sessions.json` are created by the server as it runs and are not tracked in git. `npm run reset` clears attempts and logins but keeps accounts.

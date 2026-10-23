@@ -3,7 +3,7 @@ import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { ApiError } from '../lib/api.js'
 import './Login.css'
 
-export function Login({ api, onLoggedIn }) {
+export function Login({ api, onLoggedIn, onShowSignup }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -69,6 +69,13 @@ export function Login({ api, onLoggedIn }) {
             {pending ? 'Logging in…' : 'Log in'}
           </button>
         </form>
+
+        <p className="login-switch">
+          New here?{' '}
+          <button type="button" className="link-button" onClick={onShowSignup}>
+            Create an account
+          </button>
+        </p>
       </div>
     </div>
   )
