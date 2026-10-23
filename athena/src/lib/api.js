@@ -17,14 +17,16 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
   async function call(path, { method = 'GET', token, body } = {}) {
     const headers = {}
     if (token) headers.Authorization = `Bearer ${token}`
-    if (body !== undefined) headers['Content-Type'] = 'application/json'
+    // A Blob (an image) is sent as it is; anything else as JSON.
+    const raw = body instanceof Blob
+    if (body !== undefined) headers['Content-Type'] = raw ? body.type : 'application/json'
 
     let res
     try {
       res = await fetchImpl(`${baseUrl}${path}`, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined || raw ? body : JSON.stringify(body),
       })
     } catch {
       throw new ApiError('Cannot reach the exam server. Is it running?', 0)
@@ -45,6 +47,7 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
       call('/api/attempt', { method: 'PUT', token, body: { answers, marked } }),
     getResult: (token) => call('/api/result', { token }),
     retake: (token) => call('/api/retake', { method: 'POST', token }),
+    uploadScreen: (token, jpeg) => call('/api/screen', { method: 'POST', token, body: jpeg }),
     async submit(token, answers) {
       try {
         return await call('/api/submit', { method: 'POST', token, body: { answers } })

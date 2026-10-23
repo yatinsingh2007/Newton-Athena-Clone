@@ -4,6 +4,7 @@ import { QuestionPalette } from '../components/QuestionPalette.jsx'
 import { QuestionText } from '../components/QuestionText.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { Timer } from '../components/Timer.jsx'
+import { useScreenSnapshots } from '../hooks/useScreenSnapshots.js'
 import { questionStatus, summarize } from '../lib/questionStatus.js'
 import { screenErrorMessage } from '../lib/screenShare.js'
 import { createSaveQueue } from '../lib/saveQueue.js'
@@ -47,6 +48,9 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
   const [submitError, setSubmitError] = useState(null)
   const latest = useRef({ answers: {}, marked: [] })
   const saveQueue = useRef(null)
+
+  // Screenshots go to the proctor only while the test itself is on screen.
+  useScreenSnapshots(api, session.token, test && screenShare.live ? screenShare.stream : null)
 
   const finished = useEffectEvent((result) => onSubmitted(result))
   const lostSession = useEffectEvent(() => onSessionLost())
