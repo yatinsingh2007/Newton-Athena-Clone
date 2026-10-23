@@ -26,5 +26,6 @@ test('users.json has at least 3 users with unique emails', async () => {
   const users = await readJson(dataDir, 'users.json', [])
   assert.ok(users.length >= 3)
   assert.equal(new Set(users.map((u) => u.email)).size, users.length)
-  for (const u of users) assert.ok(u.id && u.name && u.email && u.password)
+  // Demo students have a plain password; signed-up ones a passwordHash.
+  for (const u of users) assert.ok(u.id && u.name && u.email && (u.password || u.passwordHash))
 })

@@ -25,7 +25,7 @@ To run the built app instead of the dev server: `npm run build && npm start` in 
 
 ## Accounts
 
-Students can create their own account from **Create an account** on the login screen (name, email, password of 6+ characters). New accounts are saved in `server/data/accounts.json` with hashed passwords.
+Students can create their own account from **Create an account** on the login screen (name, email, password of 6+ characters). New accounts are added to `server/data/users.json` with hashed passwords.
 
 There are also three demo logins:
 
@@ -61,10 +61,9 @@ cd athena && npm test && npm run lint
 
 | File | Contents |
 | --- | --- |
-| `users.json` | Demo students |
-| `accounts.json` | Students who signed up (passwords hashed) |
+| `users.json` | All students: the three demo ones plus everyone who signed up (passwords hashed) |
 | `questions.json` | Test title, duration, and questions with correct answers (never sent to the app) |
 | `attempts.json` | Each student's start time, answers, review marks, and score once submitted |
 | `sessions.json` | Login tokens |
 
-`accounts.json`, `attempts.json` and `sessions.json` are created by the server as it runs and are not tracked in git. `npm run reset` clears attempts and logins but keeps accounts.
+`attempts.json` and `sessions.json` are created by the server as it runs and are not tracked in git. `npm run reset` clears attempts and logins but keeps accounts.
