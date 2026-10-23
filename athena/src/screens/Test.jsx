@@ -4,7 +4,9 @@ import { QuestionPalette } from '../components/QuestionPalette.jsx'
 import { QuestionText } from '../components/QuestionText.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { Timer } from '../components/Timer.jsx'
+import { useAwayTracking } from '../hooks/useAwayTracking.js'
 import { useScreenSnapshots } from '../hooks/useScreenSnapshots.js'
+import { formatDuration } from '../lib/away.js'
 import { questionStatus, summarize } from '../lib/questionStatus.js'
 import { screenErrorMessage } from '../lib/screenShare.js'
 import { createSaveQueue } from '../lib/saveQueue.js'
@@ -51,6 +53,8 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
 
   // Screenshots go to the proctor only while the test itself is on screen.
   useScreenSnapshots(api, session.token, test && screenShare.live ? screenShare.stream : null)
+  // Leaving the test window is reported to the proctor, and the student told so.
+  const awayInfo = useAwayTracking(api, session.token, test !== null)
 
   const finished = useEffectEvent((result) => onSubmitted(result))
   const lostSession = useEffectEvent(() => onSessionLost())
@@ -291,6 +295,19 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
           </button>
         </div>
       </header>
+
+      {awayInfo.lastAwayMs !== null && (
+        <div className="away-warning" role="alert">
+          <p>
+            <strong>You left the test window</strong> for {formatDuration(awayInfo.lastAwayMs)}
+            {awayInfo.count > 1 && ` (${awayInfo.count} times so far)`}. Your proctor has been told.
+            Stay in the test until you submit.
+          </p>
+          <button type="button" className="btn" onClick={awayInfo.dismiss}>
+            OK
+          </button>
+        </div>
+      )}
 
       <main className="test-body" inert={screenBlocked}>
         <div className="question-header">
