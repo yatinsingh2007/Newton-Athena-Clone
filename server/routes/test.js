@@ -10,6 +10,7 @@ import {
   isStarted,
   isValidAnswers,
   isValidMarked,
+  attemptStatus,
   recordAway,
   resultOf,
   retakeAttempt,
@@ -17,7 +18,7 @@ import {
 } from '../lib/attempts.js'
 import { requireAuth } from '../lib/auth.js'
 import { isJpeg, saveScreenshot } from '../lib/screens.js'
-import { readJson } from '../lib/store.js'
+import { DEFAULT_TEST_ID, isTestId, loadTest } from '../lib/tests.js'
 
 function publicQuestions(questions) {
   return questions.map(({ id, text, options }) => ({ id, text, options }))
@@ -25,17 +26,27 @@ function publicQuestions(questions) {
 
 const reply = (status, body) => ({ value: { status, body } })
 
+// The routes for taking one test. Mounted at /api/tests/:testId, and at /api
+// for the exam (the routes the app used before there was more than one test).
 export function testRoutes({ dataDir, now }) {
-  const router = Router()
-  const loadTest = () => readJson(dataDir, 'questions.json', null)
+  const router = Router({ mergeParams: true })
   const isExpired = (attempt, test) => now() > deadlineOf(attempt, test) + GRACE_MS
   const examInfo = (test) => examInfoAt(test, now())
 
   router.use(requireAuth(dataDir, 'student'))
+  router.use((req, res, next) => {
+    req.testId = req.params.testId ?? DEFAULT_TEST_ID
+    if (!isTestId(req.testId)) return res.status(404).json({ error: 'No such test' })
+    next()
+  })
+
+  // Shorthands for this request's test and the student's attempt at it.
+  const testOf = (req) => loadTest(dataDir, req.testId)
+  const update = (req, fn) => updateAttempt(dataDir, req.user.id, req.testId, fn)
 
   // An attempt whose time ran out counts as submitted, even if the app never sent it.
-  const settleAttempt = (userId, test) =>
-    updateAttempt(dataDir, userId, (current) => {
+  const settleAttempt = (req, test) =>
+    update(req, (current) => {
       if (isStarted(current) && !current.submittedAt && isExpired(current, test)) {
         const next = finalizeAttempt(current, test.questions, now())
         return { next, value: next }
@@ -45,9 +56,9 @@ export function testRoutes({ dataDir, now }) {
 
   // The schedule plus where this student stands, for the screen after login.
   router.get('/exam', async (req, res) => {
-    const test = await loadTest()
-    const attempt = await settleAttempt(req.user.id, test)
-    const status = !isStarted(attempt) ? 'not_started' : attempt.submittedAt ? 'submitted' : 'in_progress'
+    const test = await testOf(req)
+    const attempt = await settleAttempt(req, test)
+    const status = attemptStatus(attempt)
     res.json({
       ...examInfo(test),
       attempt: { status, result: status === 'submitted' ? resultOf(attempt) : null },
@@ -55,15 +66,17 @@ export function testRoutes({ dataDir, now }) {
   })
 
   router.get('/test', async (req, res) => {
-    const test = await loadTest()
+    const test = await testOf(req)
     const phase = examPhase(test, now())
     if (phase === 'upcoming') return res.json({ status: 'not_started', ...examInfo(test) })
 
-    const attempt = await updateAttempt(dataDir, req.user.id, (current) => {
+    const attempt = await update(req, (current) => {
       // Missed the exam window: there's nothing left to start.
       if (!isStarted(current) && phase === 'closed') return { value: current }
       // First visit, or the first visit after a retake: the attempt starts now.
-      let next = isStarted(current) ? current : freshAttempt(req.user.id, now(), current?.history)
+      let next = isStarted(current)
+        ? current
+        : freshAttempt(req.user.id, req.testId, now(), current?.history)
       // Time ran out while the student was away: submit what they had saved.
       if (!next.submittedAt && isExpired(next, test)) {
         next = finalizeAttempt(next, test.questions, now())
@@ -90,7 +103,7 @@ export function testRoutes({ dataDir, now }) {
   })
 
   router.put('/attempt', async (req, res) => {
-    const test = await loadTest()
+    const test = await testOf(req)
     const { answers, marked } = req.body ?? {}
     if (!isValidAnswers(answers, test.questions)) {
       return res.status(400).json({ error: 'Invalid answers' })
@@ -99,7 +112,7 @@ export function testRoutes({ dataDir, now }) {
       return res.status(400).json({ error: 'Invalid marked list' })
     }
 
-    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+    const { status, body } = await update(req, (attempt) => {
       if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
       if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
       if (isExpired(attempt, test)) return reply(410, { error: 'Time is up' })
@@ -112,13 +125,13 @@ export function testRoutes({ dataDir, now }) {
   })
 
   router.post('/submit', async (req, res) => {
-    const test = await loadTest()
+    const test = await testOf(req)
     const { answers } = req.body ?? {}
     if (answers !== undefined && !isValidAnswers(answers, test.questions)) {
       return res.status(400).json({ error: 'Invalid answers' })
     }
 
-    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+    const { status, body } = await update(req, (attempt) => {
       if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
       if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
       // Past the grace period only the answers already saved in time count.
@@ -130,7 +143,7 @@ export function testRoutes({ dataDir, now }) {
   })
 
   router.get('/result', async (req, res) => {
-    const attempt = await settleAttempt(req.user.id, await loadTest())
+    const attempt = await settleAttempt(req, await testOf(req))
     if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
     res.json(resultOf(attempt))
   })
@@ -140,8 +153,8 @@ export function testRoutes({ dataDir, now }) {
   router.post('/away', async (req, res) => {
     const { away } = req.body ?? {}
     if (typeof away !== 'boolean') return res.status(400).json({ error: 'Send { away: true | false }' })
-    const test = await loadTest()
-    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+    const test = await testOf(req)
+    const { status, body } = await update(req, (attempt) => {
       if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
       if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
       if (isExpired(attempt, test)) return reply(410, { error: 'Time is up' })
@@ -155,20 +168,20 @@ export function testRoutes({ dataDir, now }) {
   // while the test is in progress, for the proctor.
   router.post('/screen', express.raw({ type: 'image/jpeg', limit: '1mb' }), async (req, res) => {
     if (!isJpeg(req.body)) return res.status(400).json({ error: 'Send a JPEG image' })
-    const test = await loadTest()
-    const attempt = await findAttempt(dataDir, req.user.id)
+    const test = await testOf(req)
+    const attempt = await findAttempt(dataDir, req.user.id, req.testId)
     if (!isStarted(attempt)) return res.status(404).json({ error: 'Test not started' })
     if (attempt.submittedAt) return res.status(409).json({ error: 'Already submitted' })
     if (isExpired(attempt, test)) return res.status(410).json({ error: 'Time is up' })
-    await saveScreenshot(dataDir, req.user.id, now(), req.body)
+    await saveScreenshot(dataDir, req.testId, req.user.id, now(), req.body)
     res.status(201).json({ ok: true })
   })
 
   router.post('/retake', async (req, res) => {
-    if (examPhase(await loadTest(), now()) === 'closed') {
+    if (examPhase(await testOf(req), now()) === 'closed') {
       return res.status(410).json({ error: 'The test window has closed' })
     }
-    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+    const { status, body } = await update(req, (attempt) => {
       if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
       if (!attempt.submittedAt) return reply(409, { error: 'Submit your current attempt first' })
       return { next: retakeAttempt(attempt), value: { status: 200, body: { ok: true } } }

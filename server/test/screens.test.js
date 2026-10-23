@@ -34,8 +34,8 @@ async function sendScreen(body = JPEG, type = 'image/jpeg') {
 test('a screenshot during the test is stored', async () => {
   await getTest()
   assert.equal(await sendScreen(), 201)
-  assert.deepEqual(await listScreenshots(dataDir, 'u1'), [now()])
-  assert.deepEqual(await readFile(screenshotPath(dataDir, 'u1', now())), JPEG)
+  assert.deepEqual(await listScreenshots(dataDir, 'exam', 'u1'), [now()])
+  assert.deepEqual(await readFile(screenshotPath(dataDir, 'exam', 'u1', now())), JPEG)
 })
 
 test('only JPEGs are accepted', async () => {
@@ -63,8 +63,8 @@ test('needs a login', async () => {
 })
 
 test('only the newest screenshots are kept', async () => {
-  for (let at = 1; at <= MAX_SCREENSHOTS + 3; at++) await saveScreenshot(dataDir, 'u1', at, JPEG)
-  const kept = await listScreenshots(dataDir, 'u1')
+  for (let at = 1; at <= MAX_SCREENSHOTS + 3; at++) await saveScreenshot(dataDir, 'exam', 'u1', at, JPEG)
+  const kept = await listScreenshots(dataDir, 'exam', 'u1')
   assert.equal(kept.length, MAX_SCREENSHOTS)
   assert.equal(kept[0], 4)
 })

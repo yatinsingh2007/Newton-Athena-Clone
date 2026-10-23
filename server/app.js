@@ -20,7 +20,10 @@ export function createApp({ dataDir, now = () => Date.now() }) {
   app.use('/api', authRoutes({ dataDir }))
   // Before the student routes, which turn away anyone who isn't a student.
   app.use('/api/proctor', proctorRoutes({ dataDir, now }))
-  app.use('/api', testRoutes({ dataDir, now }))
+  // Each test at /api/tests/<id>/..., and the exam also at /api/... as before.
+  const tests = testRoutes({ dataDir, now })
+  app.use('/api/tests/:testId', tests)
+  app.use('/api', tests)
 
   return app
 }
