@@ -1,8 +1,14 @@
 // OS-level camera/mic access. Electron APIs are passed in so this can be unit tested.
 
 const SETTINGS_URLS = {
-  darwin: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Camera',
-  win32: 'ms-settings:privacy-webcam',
+  darwin: {
+    camera: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Camera',
+    microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
+  },
+  win32: {
+    camera: 'ms-settings:privacy-webcam',
+    microphone: 'ms-settings:privacy-microphone',
+  },
 }
 
 const hasOsGate = (platform) => platform === 'darwin' || platform === 'win32'
@@ -26,11 +32,19 @@ export async function requestMediaAccess({ platform, systemPreferences }) {
   return { ...status, granted: status.camera === 'granted' && status.microphone === 'granted' }
 }
 
+// Open the pane for whichever device is blocked; the camera's if both are.
+export function settingsUrl(platform, status) {
+  const urls = SETTINGS_URLS[platform]
+  if (!urls) return null
+  const onlyMicBlocked = status.camera === 'granted' && status.microphone !== 'granted'
+  return onlyMicBlocked ? urls.microphone : urls.camera
+}
+
 export function registerMediaIpc({ ipcMain, systemPreferences, shell, platform }) {
   ipcMain.handle('media:status', () => getMediaStatus({ platform, systemPreferences }))
   ipcMain.handle('media:request', () => requestMediaAccess({ platform, systemPreferences }))
   ipcMain.handle('media:open-settings', async () => {
-    const url = SETTINGS_URLS[platform]
+    const url = settingsUrl(platform, await getMediaStatus({ platform, systemPreferences }))
     if (url) await shell.openExternal(url)
   })
 }

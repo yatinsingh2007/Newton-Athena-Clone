@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { getMediaStatus, registerMediaIpc, requestMediaAccess } from './media.js'
+import { getMediaStatus, registerMediaIpc, requestMediaAccess, settingsUrl } from './media.js'
 
 function fakePrefs({ camera = 'granted', microphone = 'granted', ask = {} } = {}) {
   const asked = []
@@ -64,4 +64,23 @@ test('registerMediaIpc registers the three channels', async () => {
   await handlers['media:open-settings']()
   assert.deepEqual(opened, ['x-apple.systempreferences:com.apple.preference.security?Privacy_Camera'])
   assert.deepEqual(await handlers['media:status'](), { camera: 'granted', microphone: 'granted' })
+})
+
+test('open-settings picks the microphone pane when only the mic is denied', async () => {
+  const handlers = {}
+  const opened = []
+  registerMediaIpc({
+    ipcMain: { handle: (channel, fn) => { handlers[channel] = fn } },
+    systemPreferences: fakePrefs({ camera: 'granted', microphone: 'denied' }),
+    shell: { openExternal: async (url) => opened.push(url) },
+    platform: 'darwin',
+  })
+  await handlers['media:open-settings']()
+  assert.deepEqual(opened, ['x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone'])
+})
+
+test('settingsUrl on windows uses the microphone page when needed', () => {
+  assert.equal(settingsUrl('win32', { camera: 'granted', microphone: 'denied' }), 'ms-settings:privacy-microphone')
+  assert.equal(settingsUrl('win32', { camera: 'denied', microphone: 'denied' }), 'ms-settings:privacy-webcam')
+  assert.equal(settingsUrl('linux', { camera: 'denied', microphone: 'granted' }), null)
 })
