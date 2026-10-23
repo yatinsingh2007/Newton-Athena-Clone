@@ -1,9 +1,10 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import {
   deadlineOf,
   examPhase,
   examWindow,
   finalizeAttempt,
+  findAttempt,
   freshAttempt,
   GRACE_MS,
   isStarted,
@@ -14,6 +15,7 @@ import {
   updateAttempt,
 } from '../lib/attempts.js'
 import { requireAuth } from '../lib/auth.js'
+import { isJpeg, saveScreenshot } from '../lib/screens.js'
 import { readJson } from '../lib/store.js'
 
 function publicQuestions(questions) {
@@ -140,6 +142,19 @@ export function testRoutes({ dataDir, now }) {
     const attempt = await settleAttempt(req.user.id, await loadTest())
     if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
     res.json(resultOf(attempt))
+  })
+
+  // A JPEG of the student's shared screen, sent by the app every few seconds
+  // while the test is in progress, for the proctor.
+  router.post('/screen', express.raw({ type: 'image/jpeg', limit: '1mb' }), async (req, res) => {
+    if (!isJpeg(req.body)) return res.status(400).json({ error: 'Send a JPEG image' })
+    const test = await loadTest()
+    const attempt = await findAttempt(dataDir, req.user.id)
+    if (!isStarted(attempt)) return res.status(404).json({ error: 'Test not started' })
+    if (attempt.submittedAt) return res.status(409).json({ error: 'Already submitted' })
+    if (isExpired(attempt, test)) return res.status(410).json({ error: 'Time is up' })
+    await saveScreenshot(dataDir, req.user.id, now(), req.body)
+    res.status(201).json({ ok: true })
   })
 
   router.post('/retake', async (req, res) => {

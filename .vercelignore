@@ -6,3 +6,4 @@ server/node_modules
 server/test
 server/data/attempts.json
 server/data/sessions.json
+server/data/screens
