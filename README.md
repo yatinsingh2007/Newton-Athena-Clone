@@ -1,10 +1,21 @@
 # Athena Clone
 
-A desktop clone of Newton School's Athena exam app. A student logs in or signs up, passes a camera and microphone check, takes a 10-minute, 10-question MCQ test in a locked full-screen window, and sees their score. They can reattempt the test afterwards.
+A desktop clone of Newton School's Athena exam app. A student logs in or signs up, passes a camera, microphone and screen-sharing check, takes a 10-minute, 10-question MCQ test in a locked full-screen window while a proctor watches their screen, and sees their score. There's a scheduled exam and a practice test that can be taken at any time.
 
 ## Exam time
 
 **Saturday 24 October 2026, 10:00–10:10 AM IST.** The test opens for everyone at 10:00 and closes at 10:10, when any unsubmitted answers are submitted automatically. Install Athena 1.4.0 or later before then. To change the time, edit `startsAt` in `server/data/questions.json` and push (see [Exam window](#how-it-works)).
+
+## Practice test
+
+**Take it any time.** *Practice Test - JavaScript & React Basics* has 10 questions and 10 minutes, and it's on the home screen next to the exam.
+
+- Your 10 minutes start when you open it. They're kept on the server, so refreshing or reopening Athena doesn't reset the clock; when they run out, your saved answers are submitted.
+- It has the same rules as the exam: camera, microphone and screen-sharing check, a locked full-screen window, a screenshot of your screen every 15 seconds for the proctor, and any time you leave the test window is reported.
+- You can retake it as often as you like. Its score is separate and doesn't affect the exam.
+- It's a good way to set up camera, microphone and Screen Recording permissions before the exam.
+
+The questions are in `server/data/practice.json`. Needs Athena 1.4.0 or later.
 
 ## Download
 
