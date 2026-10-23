@@ -1,6 +1,7 @@
 import { copyFile, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { readJson, writeJson } from '../lib/store.js'
 
 // Real questions, but a fixed set of users: the live users.json grows with every signup.
 const SEED_FILES = {
@@ -9,9 +10,17 @@ const SEED_FILES = {
 }
 
 // A fresh temp data folder for one test. attempts.json and sessions.json start out missing.
-export async function makeDataDir(from = SEED_FILES) {
+// The exam window is left out, so each student's time starts when they open the test;
+// pass `startsAt` (ms) to open the test to everyone at that time instead.
+export async function makeDataDir(from = SEED_FILES, { startsAt } = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), 'athena-data-'))
   for (const [file, source] of Object.entries(from)) await copyFile(source, path.join(dir, file))
+  const test = await readJson(dir, 'questions.json', null)
+  if (test) {
+    delete test.startsAt
+    if (startsAt !== undefined) test.startsAt = new Date(startsAt).toISOString()
+    await writeJson(dir, 'questions.json', test)
+  }
   return dir
 }
 

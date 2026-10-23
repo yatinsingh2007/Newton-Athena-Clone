@@ -27,8 +27,26 @@ export function saveAttempt(dataDir, attempt) {
   return updateAttempt(dataDir, attempt.userId, () => ({ next: attempt }))
 }
 
-export function deadlineOf(attempt, durationMinutes) {
-  return attempt.startedAt + durationMinutes * 60_000
+// With `startsAt` in questions.json the test is open to everyone at the same
+// time: from startsAt for durationMinutes. Without it, each student gets
+// durationMinutes from the moment they first open the test.
+export function examWindow(test) {
+  if (!test.startsAt) return null
+  const startsAt = Date.parse(test.startsAt)
+  return { startsAt, endsAt: startsAt + test.durationMinutes * 60_000 }
+}
+
+// 'upcoming' before the window opens, 'closed' once it (and the grace period) is over.
+export function examPhase(test, now) {
+  const window = examWindow(test)
+  if (!window) return 'open'
+  if (now < window.startsAt) return 'upcoming'
+  if (now > window.endsAt + GRACE_MS) return 'closed'
+  return 'open'
+}
+
+export function deadlineOf(attempt, test) {
+  return examWindow(test)?.endsAt ?? attempt.startedAt + test.durationMinutes * 60_000
 }
 
 export function isValidAnswers(answers, questions) {

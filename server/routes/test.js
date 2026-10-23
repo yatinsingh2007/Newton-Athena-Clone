@@ -1,6 +1,8 @@
 import { Router } from 'express'
 import {
   deadlineOf,
+  examPhase,
+  examWindow,
   finalizeAttempt,
   freshAttempt,
   GRACE_MS,
@@ -23,15 +25,51 @@ const reply = (status, body) => ({ value: { status, body } })
 export function testRoutes({ dataDir, now }) {
   const router = Router()
   const loadTest = () => readJson(dataDir, 'questions.json', null)
-  const isExpired = (attempt, test) =>
-    now() > deadlineOf(attempt, test.durationMinutes) + GRACE_MS
+  const isExpired = (attempt, test) => now() > deadlineOf(attempt, test) + GRACE_MS
+  // The exam's schedule and the server's clock, for the app's live countdown.
+  const examInfo = (test) => {
+    const window = examWindow(test)
+    return {
+      title: test.title,
+      durationMinutes: test.durationMinutes,
+      startsAt: window?.startsAt ?? null,
+      endsAt: window?.endsAt ?? null,
+      now: now(),
+    }
+  }
 
   router.use(requireAuth(dataDir))
 
+  // An attempt whose time ran out counts as submitted, even if the app never sent it.
+  const settleAttempt = (userId, test) =>
+    updateAttempt(dataDir, userId, (current) => {
+      if (isStarted(current) && !current.submittedAt && isExpired(current, test)) {
+        const next = finalizeAttempt(current, test.questions, now())
+        return { next, value: next }
+      }
+      return { value: current }
+    })
+
+  // The schedule plus where this student stands, for the screen after login.
+  router.get('/exam', async (req, res) => {
+    const test = await loadTest()
+    const attempt = await settleAttempt(req.user.id, test)
+    const status = !isStarted(attempt) ? 'not_started' : attempt.submittedAt ? 'submitted' : 'in_progress'
+    res.json({
+      ...examInfo(test),
+      attempt: { status, result: status === 'submitted' ? resultOf(attempt) : null },
+    })
+  })
+
   router.get('/test', async (req, res) => {
     const test = await loadTest()
+    const phase = examPhase(test, now())
+    if (phase === 'upcoming') return res.json({ status: 'not_started', ...examInfo(test) })
+
     const attempt = await updateAttempt(dataDir, req.user.id, (current) => {
-      // First visit, or the first visit after a retake: the 10 minutes start now.
+      // Missed the exam window: there's nothing left to start.
+      if (!isStarted(current) && phase === 'closed') return { value: current }
+      // First visit, or the first visit after a retake: the attempt starts now.
       let next = isStarted(current) ? current : freshAttempt(req.user.id, now(), current?.history)
       // Time ran out while the student was away: submit what they had saved.
       if (!next.submittedAt && isExpired(next, test)) {
@@ -40,6 +78,7 @@ export function testRoutes({ dataDir, now }) {
       return { next: next === current ? undefined : next, value: next }
     })
 
+    if (!isStarted(attempt)) return res.json({ status: 'closed', ...examInfo(test) })
     if (attempt.submittedAt) {
       return res.json({ status: 'submitted', result: resultOf(attempt) })
     }
@@ -49,6 +88,7 @@ export function testRoutes({ dataDir, now }) {
       title: test.title,
       durationMinutes: test.durationMinutes,
       startedAt: attempt.startedAt,
+      endsAt: deadlineOf(attempt, test),
       now: now(),
       answers: attempt.answers,
       marked: attempt.marked,
@@ -97,20 +137,15 @@ export function testRoutes({ dataDir, now }) {
   })
 
   router.get('/result', async (req, res) => {
-    const test = await loadTest()
-    // An attempt whose time ran out counts as submitted, even if the app never sent it.
-    const attempt = await updateAttempt(dataDir, req.user.id, (current) => {
-      if (isStarted(current) && !current.submittedAt && isExpired(current, test)) {
-        const next = finalizeAttempt(current, test.questions, now())
-        return { next, value: next }
-      }
-      return { value: current }
-    })
+    const attempt = await settleAttempt(req.user.id, await loadTest())
     if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
     res.json(resultOf(attempt))
   })
 
   router.post('/retake', async (req, res) => {
+    if (examPhase(await loadTest(), now()) === 'closed') {
+      return res.status(410).json({ error: 'The test window has closed' })
+    }
     const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
       if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
       if (!attempt.submittedAt) return reply(409, { error: 'Submit your current attempt first' })
