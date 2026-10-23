@@ -1,6 +1,6 @@
 export const SESSION_KEY = 'athena-session'
 
-const SCREENS = new Set(['check', 'test', 'result'])
+const SCREENS = new Set(['home', 'check', 'test', 'result'])
 
 // Turns what was stored into { session, screen, result }, or null if it's unusable.
 export function parseStoredSession(raw) {

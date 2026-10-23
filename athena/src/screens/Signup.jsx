@@ -15,7 +15,7 @@ export function Signup({ api, onSignedUp, onShowLogin }) {
     setPending(true)
     try {
       const { token, user } = await api.signup(name, email, password)
-      onSignedUp({ token, user }, null)
+      onSignedUp({ token, user })
     } catch (err) {
       setError(err.message)
       setPending(false)

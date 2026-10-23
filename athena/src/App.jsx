@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createApi } from './lib/api.js'
 import { readStoredSession, storeSession } from './lib/session.js'
+import { Home } from './screens/Home.jsx'
 import { Login } from './screens/Login.jsx'
 import { Result } from './screens/Result.jsx'
 import { Signup } from './screens/Signup.jsx'
@@ -22,10 +23,14 @@ function App() {
     storeSession({ session, screen, result })
   }, [session, screen, result])
 
-  const onLoggedIn = (nextSession, savedResult) => {
+  const onLoggedIn = (nextSession) => {
     setSession(nextSession)
+    setResult(null)
+    setScreen('home')
+  }
+  const onShowResult = (savedResult) => {
     setResult(savedResult)
-    setScreen(savedResult ? 'result' : 'check')
+    setScreen('result')
   }
   const onReady = () => setScreen('test')
   const onRetake = () => {
@@ -42,10 +47,30 @@ function App() {
     setScreen('login')
   }
 
+  if (screen === 'home') {
+    return (
+      <Home
+        api={api}
+        session={session}
+        onStart={() => setScreen('check')}
+        onShowResult={onShowResult}
+        onLogout={onLogout}
+      />
+    )
+  }
   if (screen === 'check') return <SystemCheck api={api} session={session} onReady={onReady} />
   if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} onSessionLost={onLogout} />
   if (screen === 'result') {
-    return <Result api={api} session={session} result={result} onRetake={onRetake} onLogout={onLogout} />
+    return (
+      <Result
+        api={api}
+        session={session}
+        result={result}
+        onRetake={onRetake}
+        onHome={() => setScreen('home')}
+        onLogout={onLogout}
+      />
+    )
   }
   if (screen === 'signup') {
     return <Signup api={api} onSignedUp={onLoggedIn} onShowLogin={() => setScreen('login')} />

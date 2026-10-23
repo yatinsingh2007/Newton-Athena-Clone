@@ -83,6 +83,7 @@ cd server && npm run reset
 
 ## How it works
 
+- **Home:** after logging in, students see when the test is live (date and time window), a live countdown, and whether they've completed it, with their score. From there they start, resume, or view their result.
 - **System check:** before the test, the app asks for camera and mic access through Electron IPC (`window.athena.media`, handled in `athena/app/main.js`), then shows a live preview and a mic level bar. The camera is switched off once the test starts.
 - **Test:** one question at a time, with Previous/Next, Mark for review, Clear Selection, and a question palette. Every change is saved to the server right away.
 - **Exam window:** `startsAt` in `server/data/questions.json` opens the test to everyone at that time, for `durationMinutes`. After logging in, students see a live countdown to the start, then the time left, all from the server's clock (re-synced every 30 seconds). The test can't be opened before the start, everyone's time ends at the same moment, and once the window is over unstarted students see it as closed and reattempts are refused. Remove `startsAt` to give each student 10 minutes from when they open the test instead.
