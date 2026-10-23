@@ -20,6 +20,12 @@ const SETTINGS_URLS = {
   },
 }
 
+// Windows with a test in progress: kept full screen, on top and focused.
+const locked = new Set()
+
+// With Cmd (or Ctrl): quit, close, hide, minimise, reload, new window, new tab.
+const BLOCKED_KEYS = new Set(['q', 'w', 'h', 'm', 'r', 'n', 't'])
+
 // The window should only ever show the app's own page.
 function isTrustedUrl(url) {
   try {
@@ -47,6 +53,26 @@ function createWindow() {
       sandbox: true,
     },
   })
+
+  // During the test, losing focus (Cmd+Tab, a notification, another desktop)
+  // snaps straight back to the test window.
+  win.on('blur', () => {
+    if (!locked.has(win)) return
+    setTimeout(() => {
+      if (!locked.has(win) || win.isDestroyed()) return
+      win.show()
+      win.focus()
+      app.focus({ steal: true })
+    }, 100)
+  })
+
+  // During the test, shortcuts that would quit, close, hide, minimise, reload
+  // or open something do nothing.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (!locked.has(win) || input.type !== 'keyDown') return
+    if ((input.meta || input.control) && BLOCKED_KEYS.has(input.key.toLowerCase())) event.preventDefault()
+  })
+  win.on('closed', () => locked.delete(win))
 
   // Never leave the app's own page or open new windows.
   win.webContents.on('will-navigate', (event, url) => {
@@ -120,15 +146,26 @@ async function shareScreen(request, callback) {
 }
 
 // ---- Exam lock (called from preload.js over IPC) ----
-// Kiosk mode makes the window full screen and, on macOS, blocks swiping to other
-// desktops, Cmd+Tab, the Dock and the menu bar until the test is over.
+// Kiosk mode makes the window full screen and, on macOS, hides the Dock and
+// menu bar and asks the system to block Cmd+Tab and swiping to other desktops.
+// macOS doesn't always honour that, so the window also stays on top of
+// everything and takes focus back if it loses it (see createWindow). The app
+// reports any time away to the proctor as well.
 
 ipcMain.handle('exam:lock', (event) => {
-  BrowserWindow.fromWebContents(event.sender)?.setKiosk(true)
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (!win || locked.has(win)) return
+  locked.add(win)
+  win.setKiosk(true)
+  win.setAlwaysOnTop(true, 'screen-saver')
 })
 
 ipcMain.handle('exam:unlock', (event) => {
-  BrowserWindow.fromWebContents(event.sender)?.setKiosk(false)
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (!win) return
+  locked.delete(win)
+  win.setAlwaysOnTop(false)
+  win.setKiosk(false)
 })
 
 // ---- App lifecycle ----
@@ -153,6 +190,11 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+// No quitting mid-test (Cmd+Q from the menu, the Dock, or logging out).
+app.on('before-quit', (event) => {
+  if (locked.size > 0) event.preventDefault()
 })
 
 app.on('window-all-closed', () => {
