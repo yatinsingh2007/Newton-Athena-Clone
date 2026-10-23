@@ -83,7 +83,22 @@ export function finalizeAttempt(attempt, questions, now) {
 export const isStarted = (attempt) => attempt?.startedAt != null
 
 export function freshAttempt(userId, startedAt, history = []) {
-  return { userId, startedAt, answers: {}, marked: [], submittedAt: null, score: null, total: null, history }
+  return { userId, startedAt, answers: {}, marked: [], away: [], submittedAt: null, score: null, total: null, history }
+}
+
+// Times the student left the test window, as { leftAt, backAt } (backAt is
+// null while they're still away). Only the newest MAX_AWAY are kept.
+export const MAX_AWAY = 200
+
+export function recordAway(attempt, away, now) {
+  const events = attempt.away ?? []
+  const last = events.at(-1)
+  const isAway = last != null && last.backAt == null
+  if (away === isAway) return attempt
+  const next = away
+    ? [...events, { leftAt: now, backAt: null }]
+    : [...events.slice(0, -1), { ...last, backAt: now }]
+  return { ...attempt, away: next.slice(-MAX_AWAY) }
 }
 
 // Moves a finished attempt into history; the next GET /api/test opens a new one.

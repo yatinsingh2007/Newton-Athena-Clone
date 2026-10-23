@@ -10,6 +10,7 @@ import {
   isStarted,
   isValidAnswers,
   isValidMarked,
+  recordAway,
   resultOf,
   retakeAttempt,
   updateAttempt,
@@ -132,6 +133,22 @@ export function testRoutes({ dataDir, now }) {
     const attempt = await settleAttempt(req.user.id, await loadTest())
     if (!attempt?.submittedAt) return res.status(404).json({ error: 'No result' })
     res.json(resultOf(attempt))
+  })
+
+  // The app reports when the student leaves the test window ({ away: true }) and
+  // comes back ({ away: false }); the server's clock times it, for the proctor.
+  router.post('/away', async (req, res) => {
+    const { away } = req.body ?? {}
+    if (typeof away !== 'boolean') return res.status(400).json({ error: 'Send { away: true | false }' })
+    const test = await loadTest()
+    const { status, body } = await updateAttempt(dataDir, req.user.id, (attempt) => {
+      if (!isStarted(attempt)) return reply(404, { error: 'Test not started' })
+      if (attempt.submittedAt) return reply(409, { error: 'Already submitted' })
+      if (isExpired(attempt, test)) return reply(410, { error: 'Time is up' })
+      const next = recordAway(attempt, away, now())
+      return { next: next === attempt ? undefined : next, value: { status: 200, body: { ok: true } } }
+    })
+    res.status(status).json(body)
   })
 
   // A JPEG of the student's shared screen, sent by the app every few seconds
