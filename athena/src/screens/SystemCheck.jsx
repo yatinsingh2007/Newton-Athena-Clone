@@ -1,22 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { MicMeter } from '../components/MicMeter.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
-import { mediaErrorMessage } from '../lib/mediaErrors.js'
+import { deviceStatusLabel, mediaErrorMessage } from '../lib/mediaErrors.js'
 import './SystemCheck.css'
 
 const media = window.athena?.media
 
 const isLive = (track) => track?.readyState === 'live'
 
-function deviceState(ok, asked) {
-  if (ok) return 'Working'
-  return asked ? 'Not allowed' : 'Not checked'
-}
-
 export function SystemCheck({ user, onReady }) {
   const videoRef = useRef(null)
   const [stream, setStream] = useState(null)
-  const [error, setError] = useState(null)
+  // Why the last check failed: a getUserMedia error name, or 'ended' if a device dropped.
+  const [errorName, setErrorName] = useState(null)
+  const [, setTrackChange] = useState(0)
   const [osBlocked, setOsBlocked] = useState(false)
   const [pending, setPending] = useState(false)
 
@@ -25,13 +22,24 @@ export function SystemCheck({ user, onReady }) {
   useEffect(() => {
     streamRef.current = stream
     if (videoRef.current) videoRef.current.srcObject = stream
+    if (!stream) return
+    // A camera unplugged or taken by another app ends its track.
+    const onEnded = () => {
+      setErrorName('ended')
+      setTrackChange((n) => n + 1)
+    }
+    const tracks = stream.getTracks()
+    tracks.forEach((t) => t.addEventListener('ended', onEnded))
+    return () => tracks.forEach((t) => t.removeEventListener('ended', onEnded))
   }, [stream])
 
   // Release the camera and mic when leaving this screen; the test never uses them.
   useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), [])
 
   async function allow() {
-    setError(null)
+    stream?.getTracks().forEach((t) => t.stop())
+    setStream(null)
+    setErrorName(null)
     setOsBlocked(false)
     setPending(true)
     try {
@@ -39,12 +47,12 @@ export function SystemCheck({ user, onReady }) {
       const access = media ? await media.request() : { granted: true }
       if (!access.granted) {
         setOsBlocked(true)
-        setError(mediaErrorMessage('NotAllowedError'))
+        setErrorName('NotAllowedError')
         return
       }
       setStream(await navigator.mediaDevices.getUserMedia({ video: true, audio: true }))
     } catch (err) {
-      setError(mediaErrorMessage(err.name))
+      setErrorName(err.name)
     } finally {
       setPending(false)
     }
@@ -52,6 +60,7 @@ export function SystemCheck({ user, onReady }) {
 
   const cameraOk = isLive(stream?.getVideoTracks()[0])
   const micOk = isLive(stream?.getAudioTracks()[0])
+  const ready = cameraOk && micOk
 
   function start() {
     stream.getTracks().forEach((t) => t.stop())
@@ -88,12 +97,12 @@ export function SystemCheck({ user, onReady }) {
           <div className="check-item" data-ok={cameraOk}>
             <span className="check-dot" aria-hidden="true" />
             Camera
-            <span className="check-item-state">{deviceState(cameraOk, Boolean(error))}</span>
+            <span className="check-item-state">{deviceStatusLabel(cameraOk, errorName)}</span>
           </div>
           <div className="check-item" data-ok={micOk}>
             <span className="check-dot" aria-hidden="true" />
             Microphone
-            <span className="check-item-state">{deviceState(micOk, Boolean(error))}</span>
+            <span className="check-item-state">{deviceStatusLabel(micOk, errorName)}</span>
           </div>
         </div>
 
@@ -104,9 +113,9 @@ export function SystemCheck({ user, onReady }) {
           </div>
         )}
 
-        {error && (
+        {errorName && (
           <div className="check-error">
-            <p className="error-text" role="alert">{error}</p>
+            <p className="error-text" role="alert">{mediaErrorMessage(errorName)}</p>
           </div>
         )}
 
@@ -116,14 +125,13 @@ export function SystemCheck({ user, onReady }) {
               Open System Settings
             </button>
           )}
-          {!stream && (
-            <button type="button" className="btn btn-primary" onClick={allow} disabled={pending}>
-              {pending ? 'Waiting for permission…' : error ? 'Try again' : 'Allow camera & microphone'}
-            </button>
-          )}
-          {stream && (
-            <button type="button" className="btn btn-primary" onClick={start} disabled={!cameraOk || !micOk}>
+          {ready ? (
+            <button type="button" className="btn btn-primary" onClick={start}>
               Start Test
+            </button>
+          ) : (
+            <button type="button" className="btn btn-primary" onClick={allow} disabled={pending}>
+              {pending ? 'Waiting for permission…' : errorName ? 'Try again' : 'Allow camera & microphone'}
             </button>
           )}
         </div>
