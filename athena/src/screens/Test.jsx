@@ -76,6 +76,16 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
     setLoadAttempt((n) => n + 1)
   }
 
+  // Lock the window (full screen, no switching apps or desktops) for the whole
+  // test; leaving this screen — submit, logout, lost session — unlocks it.
+  useEffect(() => {
+    const exam = window.athena?.exam
+    exam?.lock()
+    return () => {
+      exam?.unlock()
+    }
+  }, [])
+
   // One submit at a time, whether from the dialog or the timer.
   async function submitNow({ auto = false } = {}) {
     if (submitting.current) return
