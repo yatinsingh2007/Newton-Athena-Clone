@@ -42,7 +42,7 @@ function App() {
     setScreen('login')
   }
 
-  if (screen === 'check') return <SystemCheck user={session.user} onReady={onReady} />
+  if (screen === 'check') return <SystemCheck api={api} session={session} onReady={onReady} />
   if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} onSessionLost={onLogout} />
   if (screen === 'result') {
     return <Result api={api} session={session} result={result} onRetake={onRetake} onLogout={onLogout} />

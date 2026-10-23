@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
+import { ExamClock } from '../components/ExamClock.jsx'
 import { MicMeter } from '../components/MicMeter.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
+import { useExamClock } from '../hooks/useExamClock.js'
 import { deviceStatusLabel, mediaErrorMessage } from '../lib/mediaErrors.js'
+import { formatClock } from '../lib/timer.js'
 import './SystemCheck.css'
 
 const media = window.athena?.media
 
 const isLive = (track) => track?.readyState === 'live'
 
-export function SystemCheck({ user, onReady }) {
+export function SystemCheck({ api, session, onReady }) {
+  const { user } = session
+  const { clock } = useExamClock(api, session.token)
   const videoRef = useRef(null)
   const [stream, setStream] = useState(null)
   // Why the last check failed: a getUserMedia error name, or 'ended' if a device dropped.
@@ -61,6 +66,9 @@ export function SystemCheck({ user, onReady }) {
   const cameraOk = isLive(stream?.getVideoTracks()[0])
   const micOk = isLive(stream?.getAudioTracks()[0])
   const ready = cameraOk && micOk
+  // The test can only be opened while its window is live (or if it has none).
+  const phase = clock?.phase ?? 'anytime'
+  const canStart = phase === 'open' || phase === 'anytime'
 
   function start() {
     stream.getTracks().forEach((t) => t.stop())
@@ -78,6 +86,8 @@ export function SystemCheck({ user, onReady }) {
         <p className="check-intro">
           Hi {user.name.split(' ')[0]}, both must be working before the test can start.
         </p>
+
+        <ExamClock clock={clock} />
 
         <div className="check-preview">
           {stream ? (
@@ -126,8 +136,12 @@ export function SystemCheck({ user, onReady }) {
             </button>
           )}
           {ready ? (
-            <button type="button" className="btn btn-primary" onClick={start}>
-              Start Test
+            <button type="button" className="btn btn-primary" onClick={start} disabled={!canStart}>
+              {phase === 'upcoming'
+                ? `Starts in ${formatClock(clock.exam.startsAt - clock.now)}`
+                : phase === 'closed'
+                  ? 'Test closed'
+                  : 'Start Test'}
             </button>
           ) : (
             <button type="button" className="btn btn-primary" onClick={allow} disabled={pending}>
