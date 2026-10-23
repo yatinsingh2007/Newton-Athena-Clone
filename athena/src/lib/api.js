@@ -1,4 +1,9 @@
-export const API_URL = 'http://localhost:4747'
+// Set VITE_API_URL at build time to use a deployed server (see .env.production).
+export function resolveApiUrl(env) {
+  return (env?.VITE_API_URL || 'http://localhost:4747').replace(/\/+$/, '')
+}
+
+export const API_URL = resolveApiUrl(import.meta.env)
 
 export class ApiError extends Error {
   constructor(message, status) {

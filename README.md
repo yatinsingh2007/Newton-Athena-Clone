@@ -35,7 +35,20 @@ This builds the app and writes `athena/release/Athena-1.0.0-arm64.dmg` (Apple Si
 
 To install, open the `.dmg` and drag **Athena** into **Applications**. The app isn't signed with an Apple Developer certificate, so the first time you open it macOS will block it. Right-click Athena in Applications, choose **Open**, then **Open** again. After that it opens normally.
 
-The `.dmg` contains only the desktop app. The exam server still has to be running (`cd server && npm run dev`) for login and tests to work.
+The `.dmg` talks to the deployed server on Vercel (see below), so it works without running the server locally.
+
+## Deployed server (Vercel)
+
+The server is deployed at **https://athena-server-one.vercel.app** (`server/vercel.json`, entry point `server/api/index.js`). To redeploy after changes:
+
+```bash
+cd server
+npx vercel deploy --prod
+```
+
+Builds of the app (`npm run build`, `npm start`, `npm run dist`) talk to that URL, set in `athena/.env.production` as `VITE_API_URL`. `npm run dev` keeps using the local server on port 4747.
+
+**This deployment is a demo.** Vercel only lets the server write to a temporary folder that is wiped whenever Vercel starts a fresh instance. The demo logins and questions always work, but sign-ups, answers and scores can disappear. For data that lasts, run the server somewhere with a persistent disk.
 
 ## Accounts
 
