@@ -1,13 +1,14 @@
-import { cp, mkdtemp } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { copyFile, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 const seedDir = path.join(import.meta.dirname, '..', 'data')
+// attempts.json and sessions.json are runtime data and start out missing.
+const SEED_FILES = ['users.json', 'questions.json']
 
 export async function makeDataDir() {
   const dir = await mkdtemp(path.join(tmpdir(), 'athena-data-'))
-  if (existsSync(seedDir)) await cp(seedDir, dir, { recursive: true })
+  for (const file of SEED_FILES) await copyFile(path.join(seedDir, file), path.join(dir, file))
   return dir
 }
 
