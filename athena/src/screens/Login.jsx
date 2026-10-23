@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
-import { ApiError } from '../lib/api.js'
 import './Login.css'
 
 export function Login({ api, onLoggedIn, onShowSignup }) {
@@ -15,13 +14,7 @@ export function Login({ api, onLoggedIn, onShowSignup }) {
     setPending(true)
     try {
       const { token, user } = await api.login(email, password)
-      let result = null
-      try {
-        result = await api.getResult(token)
-      } catch (err) {
-        if (!(err instanceof ApiError && err.status === 404)) throw err
-      }
-      onLoggedIn({ token, user }, result)
+      onLoggedIn({ token, user })
     } catch (err) {
       setError(err.message)
       setPending(false)

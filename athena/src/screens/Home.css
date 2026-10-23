@@ -1,0 +1,49 @@
+.home-card {
+  max-width: 480px;
+}
+
+.home-card h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.home-greeting {
+  margin: 0 0 24px;
+  color: var(--text-muted);
+}
+
+.home-details {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 20px;
+}
+
+.home-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-details dt {
+  color: var(--text-muted);
+}
+
+.home-details dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-badge[data-done='true'] {
+  color: var(--success);
+}
+
+.home-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.home-actions .btn-primary {
+  flex: 1;
+}

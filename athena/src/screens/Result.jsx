@@ -11,7 +11,7 @@ function messageFor(score) {
 const formatTime = (ms) =>
   new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
-export function Result({ api, session, result, onRetake, onLogout }) {
+export function Result({ api, session, result, onRetake, onHome, onLogout }) {
   const [error, setError] = useState(null)
   const [pending, setPending] = useState(false)
   const percent = Math.round((result.score / result.total) * 100)
@@ -70,6 +70,9 @@ export function Result({ api, session, result, onRetake, onLogout }) {
         <div className="result-actions">
           <button type="button" className="btn btn-primary" onClick={retake} disabled={pending}>
             {pending ? 'Starting…' : 'Reattempt test'}
+          </button>
+          <button type="button" className="btn" onClick={onHome} disabled={pending}>
+            Home
           </button>
           <button type="button" className="btn" onClick={onLogout} disabled={pending}>
             Log out
