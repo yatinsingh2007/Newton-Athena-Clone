@@ -2,7 +2,9 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { QuestionPalette } from '../components/QuestionPalette.jsx'
 import { QuestionText } from '../components/QuestionText.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
+import { Timer } from '../components/Timer.jsx'
 import { questionStatus } from '../lib/questionStatus.js'
+import { remainingMs } from '../lib/timer.js'
 import './Test.css'
 
 const LETTERS = ['A', 'B', 'C', 'D']
@@ -17,6 +19,8 @@ export function Test({ api, session, onSubmitted }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
   const paletteButton = useRef(null)
+  const [clock, setClock] = useState(() => Date.now())
+  const submitting = useRef(false)
   const latest = useRef({ answers: {}, marked: [] })
   const saveChain = useRef(Promise.resolve())
 
@@ -28,7 +32,7 @@ export function Test({ api, session, onSubmitted }) {
       (data) => {
         if (cancelled) return
         if (data.status === 'submitted') return finished(data.result)
-        setTest(data)
+        setTest({ ...data, fetchedAt: Date.now() })
         setAnswers(data.answers)
         setMarked(data.marked)
         latest.current = { answers: data.answers, marked: data.marked }
@@ -41,6 +45,33 @@ export function Test({ api, session, onSubmitted }) {
       cancelled = true
     }
   }, [api, session.token])
+
+  useEffect(() => {
+    if (!test) return
+    const id = setInterval(() => setClock(Date.now()), 500)
+    return () => clearInterval(id)
+  }, [test])
+
+  const remaining = test
+    ? remainingMs({
+        startedAt: test.startedAt,
+        durationMinutes: test.durationMinutes,
+        serverNow: test.now,
+        clientNowAtFetch: test.fetchedAt,
+        clientNow: clock,
+      })
+    : null
+
+  const submitNow = useEffectEvent(async () => {
+    if (submitting.current) return
+    submitting.current = true
+    onSubmitted(await api.submit(session.token, latest.current.answers))
+  })
+
+  // Time is up: submit whatever has been answered, no confirmation.
+  useEffect(() => {
+    if (remaining === 0) submitNow()
+  }, [remaining])
 
   if (loadError) return <div className="test-status" role="alert">{loadError}</div>
   if (!test) return <div className="test-status">Loading your test…</div>
@@ -98,6 +129,7 @@ export function Test({ api, session, onSubmitted }) {
       <header className="test-header">
         <h1 className="test-title">{test.title}</h1>
         <div className="test-header-actions">
+          <Timer remaining={remaining} />
           <ThemeToggle />
           <button type="button" className="btn btn-success">Submit Quiz</button>
         </div>
