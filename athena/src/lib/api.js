@@ -39,31 +39,45 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
     return data
   }
 
+  // The calls about one test: taking it at `prefix` (/api for the exam,
+  // /api/tests/<id> for any test) and, for proctors, watching it (?test=<id>).
+  function testCalls(prefix, testId) {
+    const proctor = (path) => `/api/proctor${path}${testId ? `?test=${encodeURIComponent(testId)}` : ''}`
+    const calls = {
+      getExam: (token) => call(`${prefix}/exam`, { token }),
+      getTest: (token) => call(`${prefix}/test`, { token }),
+      saveAttempt: (token, { answers, marked }) =>
+        call(`${prefix}/attempt`, { method: 'PUT', token, body: { answers, marked } }),
+      getResult: (token) => call(`${prefix}/result`, { token }),
+      retake: (token) => call(`${prefix}/retake`, { method: 'POST', token }),
+      reportAway: (token, away) => call(`${prefix}/away`, { method: 'POST', token, body: { away } }),
+      uploadScreen: (token, jpeg) => call(`${prefix}/screen`, { method: 'POST', token, body: jpeg }),
+      proctorStudents: (token) => call(proctor('/students'), { token }),
+      proctorScreens: (token, studentId) => call(proctor(`/students/${studentId}/screens`), { token }),
+      proctorScreenshot: (token, studentId, takenAt) =>
+        call(proctor(`/students/${studentId}/screens/${takenAt}`), { token, as: 'blob' }),
+      async submit(token, answers) {
+        try {
+          return await call(`${prefix}/submit`, { method: 'POST', token, body: { answers } })
+        } catch (err) {
+          // Already submitted (e.g. auto-submit raced a click): show the saved result.
+          if (err instanceof ApiError && err.status === 409) return calls.getResult(token)
+          throw err
+        }
+      },
+    }
+    return calls
+  }
+
   const api = {
     login: (email, password) => call('/api/login', { method: 'POST', body: { email, password } }),
     signup: (name, email, password) =>
       call('/api/signup', { method: 'POST', body: { name, email, password } }),
-    getExam: (token) => call('/api/exam', { token }),
-    getTest: (token) => call('/api/test', { token }),
-    saveAttempt: (token, { answers, marked }) =>
-      call('/api/attempt', { method: 'PUT', token, body: { answers, marked } }),
-    getResult: (token) => call('/api/result', { token }),
-    retake: (token) => call('/api/retake', { method: 'POST', token }),
-    reportAway: (token, away) => call('/api/away', { method: 'POST', token, body: { away } }),
-    uploadScreen: (token, jpeg) => call('/api/screen', { method: 'POST', token, body: jpeg }),
-    proctorStudents: (token) => call('/api/proctor/students', { token }),
-    proctorScreens: (token, studentId) => call(`/api/proctor/students/${studentId}/screens`, { token }),
-    proctorScreenshot: (token, studentId, takenAt) =>
-      call(`/api/proctor/students/${studentId}/screens/${takenAt}`, { token, as: 'blob' }),
-    async submit(token, answers) {
-      try {
-        return await call('/api/submit', { method: 'POST', token, body: { answers } })
-      } catch (err) {
-        // Already submitted (e.g. auto-submit raced a click): show the saved result.
-        if (err instanceof ApiError && err.status === 409) return api.getResult(token)
-        throw err
-      }
-    },
+    getTests: (token) => call('/api/tests', { token }),
+    proctorTests: (token) => call('/api/proctor/tests', { token }),
+    // Without forTest, the test calls are about the exam.
+    ...testCalls('/api'),
+    forTest: (testId) => ({ ...api, ...testCalls(`/api/tests/${encodeURIComponent(testId)}`, testId) }),
   }
   return api
 }

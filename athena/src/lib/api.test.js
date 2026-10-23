@@ -52,6 +52,27 @@ test('proctorScreenshot returns the image as a Blob', async () => {
   assert.equal(blob.size, 3)
 })
 
+test('forTest points the test and proctor calls at that test', async () => {
+  const { impl, calls } = fakeFetch({})
+  const api = createApi('http://x', impl).forTest('practice')
+  await api.getTest('tok').catch(() => {})
+  await api.proctorStudents('tok').catch(() => {})
+  await api.proctorScreens('tok', 'u1').catch(() => {})
+  assert.equal(calls[0].url, 'http://x/api/tests/practice/test')
+  assert.equal(calls[1].url, 'http://x/api/proctor/students?test=practice')
+  assert.equal(calls[2].url, 'http://x/api/proctor/students/u1/screens?test=practice')
+})
+
+test('submit falls back to the same test\'s result when already submitted', async () => {
+  const { impl, calls } = fakeFetch({
+    'POST /api/tests/practice/submit': [409, { error: 'Already submitted' }],
+    'GET /api/tests/practice/result': [200, { score: 3 }],
+  })
+  const result = await createApi('http://x', impl).forTest('practice').submit('tok', {})
+  assert.deepEqual(result, { score: 3 })
+  assert.equal(calls[1].url, 'http://x/api/tests/practice/result')
+})
+
 test('non-2xx throws ApiError with server message', async () => {
   const { impl } = fakeFetch({ 'POST /api/login': [401, { error: 'Invalid email or password' }] })
   await assert.rejects(createApi('http://x', impl).login('a', 'b'), (err) => {

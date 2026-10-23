@@ -1,15 +1,24 @@
-.home-card {
-  max-width: 480px;
+.home-list {
+  display: grid;
+  gap: 20px;
+  width: min(520px, 100%);
 }
 
-.home-card h1 {
-  margin: 0 0 6px;
-  font-size: 24px;
+.home-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.home-greeting {
-  margin: 0 0 24px;
-  color: var(--text-muted);
+.home-head h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.home-card h2 {
+  margin: 0 0 20px;
+  font-size: 20px;
 }
 
 .home-details {

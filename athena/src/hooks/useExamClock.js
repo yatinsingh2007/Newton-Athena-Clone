@@ -1,39 +1,12 @@
-import { useEffect, useState } from 'react'
-import { examPhase, monotonicNow, RESYNC_MS, serverTime } from '../lib/timer.js'
+import { useCallback } from 'react'
+import { examPhase } from '../lib/timer.js'
+import { useServerClock } from './useServerClock.js'
 
-// The exam's schedule and a live server clock, re-synced every RESYNC_MS.
+// One test's schedule and a live server clock, re-synced every RESYNC_MS.
 // `clock` is null until the server has answered once; `error` is the last failure.
 export function useExamClock(api, token) {
-  const [sync, setSync] = useState(null)
-  const [error, setError] = useState(null)
-  const [clientNow, setClientNow] = useState(monotonicNow)
-
-  useEffect(() => {
-    let cancelled = false
-    const load = () =>
-      api.getExam(token).then(
-        (exam) => {
-          if (cancelled) return
-          setSync({ exam, fetchedAt: monotonicNow() })
-          setError(null)
-        },
-        // Keep counting from the last sync; the next one may get through.
-        (err) => !cancelled && setError(err),
-      )
-    load()
-    const id = setInterval(load, RESYNC_MS)
-    return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [api, token])
-
-  useEffect(() => {
-    const id = setInterval(() => setClientNow(monotonicNow()), 500)
-    return () => clearInterval(id)
-  }, [])
-
-  if (!sync) return { clock: null, error }
-  const now = serverTime({ serverNow: sync.exam.now, clientNowAtFetch: sync.fetchedAt, clientNow })
-  return { clock: { exam: sync.exam, now, phase: examPhase(sync.exam, now) }, error }
+  const load = useCallback(() => api.getExam(token), [api, token])
+  const { data, now, error } = useServerClock(load)
+  if (!data) return { clock: null, error }
+  return { clock: { exam: data, now, phase: examPhase(data, now) }, error }
 }

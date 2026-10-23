@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useScreenShare } from './hooks/useScreenShare.js'
 import { createApi } from './lib/api.js'
 import { readStoredSession, storeSession } from './lib/session.js'
@@ -19,19 +19,28 @@ const restored = readStoredSession()
 function App() {
   const [screen, setScreen] = useState(restored?.screen ?? 'login')
   const [session, setSession] = useState(restored?.session ?? null)
+  // The test the student picked on the home screen.
+  const [testId, setTestId] = useState(restored?.testId ?? 'exam')
   const [result, setResult] = useState(restored?.result ?? null)
   const screenShare = useScreenShare()
+  // The system check, test and result screens only ever talk about this test.
+  const testApi = useMemo(() => api.forTest(testId), [testId])
 
   useEffect(() => {
-    storeSession({ session, screen, result })
-  }, [session, screen, result])
+    storeSession({ session, screen, testId, result })
+  }, [session, screen, testId, result])
 
   const onLoggedIn = (nextSession) => {
     setSession(nextSession)
     setResult(null)
     setScreen(nextSession.user.role === 'proctor' ? 'proctor' : 'home')
   }
-  const onShowResult = (savedResult) => {
+  const onStart = (nextTestId) => {
+    setTestId(nextTestId)
+    setScreen('check')
+  }
+  const onShowResult = (nextTestId, savedResult) => {
+    setTestId(nextTestId)
     setResult(savedResult)
     setScreen('result')
   }
@@ -55,31 +64,27 @@ function App() {
   if (screen === 'proctor') return <Proctor api={api} session={session} onLogout={onLogout} />
   if (screen === 'home') {
     return (
-      <Home
-        api={api}
-        session={session}
-        onStart={() => setScreen('check')}
-        onShowResult={onShowResult}
-        onLogout={onLogout}
-      />
+      <Home api={api} session={session} onStart={onStart} onShowResult={onShowResult} onLogout={onLogout} />
     )
   }
-  if (screen === 'check') return (
-      <SystemCheck api={api} session={session} screenShare={screenShare} onReady={onReady} />
-    )
-  if (screen === 'test') return (
+  if (screen === 'check') {
+    return <SystemCheck api={testApi} session={session} screenShare={screenShare} onReady={onReady} />
+  }
+  if (screen === 'test') {
+    return (
       <Test
-        api={api}
+        api={testApi}
         session={session}
         screenShare={screenShare}
         onSubmitted={onSubmitted}
         onSessionLost={onLogout}
       />
     )
+  }
   if (screen === 'result') {
     return (
       <Result
-        api={api}
+        api={testApi}
         session={session}
         result={result}
         onRetake={onRetake}

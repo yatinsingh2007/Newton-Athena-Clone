@@ -5,12 +5,17 @@ import { parseStoredSession, SESSION_KEY } from './session.js'
 const user = { id: 'u1', name: 'Asha', email: 'asha@student.com' }
 const stored = (data) => JSON.stringify(data)
 
-test('restores a test in progress', () => {
-  assert.deepEqual(parseStoredSession(stored({ token: 't1', user, screen: 'test', result: null })), {
+test('restores a test in progress, and which test it is', () => {
+  assert.deepEqual(parseStoredSession(stored({ token: 't1', user, screen: 'test', testId: 'practice', result: null })), {
     session: { token: 't1', user },
     screen: 'test',
+    testId: 'practice',
     result: null,
   })
+})
+
+test('a session stored before there were several tests is on the exam', () => {
+  assert.equal(parseStoredSession(stored({ token: 't1', user, screen: 'test' })).testId, 'exam')
 })
 
 test('restores the result screen with its result', () => {
