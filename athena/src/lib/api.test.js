@@ -74,3 +74,10 @@ test('signup sends name, email and password', async () => {
   assert.deepEqual(data, { token: 't2', user: { id: 'n1' } })
   assert.deepEqual(JSON.parse(calls[0].body), { name: 'Riya', email: 'r@s.com', password: 'secret1' })
 })
+
+test('retake POSTs with the token', async () => {
+  const { impl, calls } = fakeFetch({ 'POST /api/retake': [200, { ok: true }] })
+  assert.deepEqual(await createApi('http://x', impl).retake('tok'), { ok: true })
+  assert.equal(calls[0].method, 'POST')
+  assert.equal(calls[0].headers.Authorization, 'Bearer tok')
+})
