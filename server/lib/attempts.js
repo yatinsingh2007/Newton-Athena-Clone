@@ -19,3 +19,17 @@ export async function saveAttempt(dataDir, attempt) {
 export function deadlineOf(attempt, durationMinutes) {
   return attempt.startedAt + durationMinutes * 60_000
 }
+
+export function isValidAnswers(answers, questions) {
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) return false
+  const ids = new Set(questions.map((q) => q.id))
+  return Object.entries(answers).every(
+    ([id, choice]) => ids.has(id) && Number.isInteger(choice) && choice >= 0 && choice <= 3,
+  )
+}
+
+export function isValidMarked(marked, questions) {
+  if (!Array.isArray(marked)) return false
+  const ids = new Set(questions.map((q) => q.id))
+  return marked.every((id) => ids.has(id))
+}
