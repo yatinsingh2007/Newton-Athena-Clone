@@ -1,0 +1,8 @@
+# Manual `vercel deploy` from the repo root only needs the server (Root Directory: server).
+athena
+docs
+.superpowers
+server/node_modules
+server/test
+server/data/attempts.json
+server/data/sessions.json
