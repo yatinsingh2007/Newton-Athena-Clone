@@ -17,7 +17,7 @@
 - Test is 10 questions, 4 options each, `durationMinutes: 10`; auto-submit at 0:00; server accepts up to `GRACE_MS = 10_000` past the deadline.
 - One attempt per student. `startedAt` is set on the first `GET /api/test` and never reset.
 - The camera is shown only on the System Check screen; the stream is stopped before the test starts.
-- Server port 4000; Vite dev port 5173 (`strictPort`); CORS allows all origins.
+- Server port 4747; Vite dev port 5173 (`strictPort`); CORS allows all origins.
 - Electron: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`; grant `media` permission in the session handler.
 - Native abilities go through IPC: the renderer never touches Node/Electron APIs directly. It calls `window.athena.*`, exposed by `app/preload.cjs` via `contextBridge`, which `ipcRenderer.invoke`s channels handled in main with `ipcMain.handle`. Channel names: `media:status`, `media:request`, `media:open-settings`.
 - Light + dark theme via CSS custom properties; default follows `prefers-color-scheme`; toggle override stored in `localStorage` key `athena-theme`.
@@ -39,7 +39,7 @@
 ```
 server/
   package.json            type: module; scripts dev/start/test/reset; nodemonConfig ignores data/
-  index.js                listens on PORT||4000 with dataDir=server/data
+  index.js                listens on PORT||4747 with dataDir=server/data
   app.js                  createApp({ dataDir, now }) — middleware + route mounting
   lib/store.js            readJson / writeJson (atomic)
   lib/auth.js             requireAuth middleware (sessions.json lookup)
@@ -82,8 +82,8 @@ Delete: `server/questions.json` (moved to `server/data/`), `athena/src/App.css`,
 
 - [ ] **Step 1:** Write `health.test.js › GET /api/health returns ok`: expects status 200, body `{ ok: true }`, and header `access-control-allow-origin: *`. Add `OPTIONS /api/login returns 204` with `access-control-allow-headers` containing `Authorization` and `Content-Type`.
 - [ ] **Step 2:** Set `"type": "module"`, `"main": "index.js"`, scripts `"start": "node index.js"`, `"dev": "nodemon index.js"`, `"test": "node --test"`, and `"nodemonConfig": { "ignore": ["data/*", "test/*"] }`. Run `npm test` in `server/` → FAIL.
-- [ ] **Step 3:** Implement `createApp` in `app.js` with `express.json()`, a hand-written CORS middleware (no new dependency; answers preflight with 204; allowed methods `GET,POST,PUT,OPTIONS`), and `GET /api/health`. `index.js` calls `createApp({ dataDir: <dir of index.js>/data })` and listens on `process.env.PORT || 4000`, logging the URL.
-- [ ] **Step 4:** `npm test` → PASS. `npm start` then `curl localhost:4000/api/health` → `{"ok":true}`.
+- [ ] **Step 3:** Implement `createApp` in `app.js` with `express.json()`, a hand-written CORS middleware (no new dependency; answers preflight with 204; allowed methods `GET,POST,PUT,OPTIONS`), and `GET /api/health`. `index.js` calls `createApp({ dataDir: <dir of index.js>/data })` and listens on `process.env.PORT || 4747`, logging the URL.
+- [ ] **Step 4:** `npm test` → PASS. `npm start` then `curl localhost:4747/api/health` → `{"ok":true}`.
 - [ ] **Step 5:** Commit `feat(server): scaffold express app with health check and cors`.
 
 ### Task 2: JSON file store
@@ -205,7 +205,7 @@ Delete: `server/questions.json` (moved to `server/data/`), `athena/src/App.css`,
 **Files:** Create `src/lib/api.js`, `src/lib/api.test.js`. Modify `src/App.jsx`.
 
 **Interfaces:**
-- `API_URL = 'http://localhost:4000'`; `class ApiError extends Error { status }`; `createApi(baseUrl = API_URL, fetchImpl = fetch)` returns `{ login(email, password), getTest(token), saveAttempt(token, { answers, marked }), submit(token, answers), getResult(token) }`. Non-2xx responses throw `ApiError(body.error ?? 'Request failed', status)`. A network failure throws `ApiError('Cannot reach the exam server. Is it running?', 0)`. `submit` turns a 409 into `getResult(token)`, so a double submit resolves to the saved result.
+- `API_URL = 'http://localhost:4747'`; `class ApiError extends Error { status }`; `createApi(baseUrl = API_URL, fetchImpl = fetch)` returns `{ login(email, password), getTest(token), saveAttempt(token, { answers, marked }), submit(token, answers), getResult(token) }`. Non-2xx responses throw `ApiError(body.error ?? 'Request failed', status)`. A network failure throws `ApiError('Cannot reach the exam server. Is it running?', 0)`. `submit` turns a 409 into `getResult(token)`, so a double submit resolves to the saved result.
 - `App.jsx` state: `screen: 'login'|'check'|'test'|'result'`, `session: { token, user } | null`, `result: { score, total, submittedAt } | null`. Handlers: `onLoggedIn(session, result)` (go to `'result'` if a result exists, else `'check'`), `onReady()` → `'test'`, `onSubmitted(result)` → `'result'`, `onLogout()` → clears everything → `'login'`. Screens are placeholders until their own tasks.
 
 - [ ] **Step 1:** `api.test.js` with a fake `fetchImpl`: `login sends JSON body and returns data`, `adds bearer token`, `non-2xx throws ApiError with server message`, `network failure throws ApiError with status 0`, `409 on submit resolves to saved result`.

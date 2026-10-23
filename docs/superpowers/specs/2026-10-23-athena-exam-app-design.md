@@ -153,7 +153,7 @@ production `file://` page (origin `null`) work — my call):
 
 Auth: `Authorization: Bearer <token>`, tokens stored in `sessions.json`.
 
-Port: 4000 (my call). Add `start` / `dev` (nodemon) scripts to `server/package.json`.
+Port: 4747 (my call; 4000 and 4100 were taken by another local project). Add `start` / `dev` (nodemon) scripts to `server/package.json`.
 nodemon must ignore the data JSON files the server writes, so a save doesn't
 restart the server mid-request (my call). Add a `reset` script
 that clears `attempts.json` and `sessions.json`, since each seeded student can only submit once
