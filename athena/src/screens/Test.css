@@ -130,3 +130,8 @@
   min-height: 100vh;
   color: var(--text-muted);
 }
+
+.save-note {
+  font-size: 13px;
+  color: var(--text-muted);
+}
