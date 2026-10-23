@@ -4,9 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k -n vite,electron \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "build": "vite build",
+    "start": "electron .",
     "lint": "eslint .",
+    "test": "node --test \"src/lib/**/*.test.js\" \"app/**/*.test.js\"",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -31,8 +33,8 @@
     "vite": "^8.3.4",
     "wait-on": "^9.5.1"
   },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
-  "main": "eslint.config.js",
+  "description": "Athena online examination desktop app",
+  "main": "app/main.js",
   "keywords": [],
   "author": "",
   "license": "ISC"
