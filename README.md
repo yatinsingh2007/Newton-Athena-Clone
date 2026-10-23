@@ -4,7 +4,7 @@ A desktop clone of Newton School's Athena exam app. A student logs in or signs u
 
 ## Exam time
 
-**Saturday 24 October 2026, 10:00–10:10 AM IST.** The test opens for everyone at 10:00 and closes at 10:10, when any unsubmitted answers are submitted automatically. Install Athena 1.2.0 or later before then. To change the time, edit `startsAt` in `server/data/questions.json` and push (see [Exam window](#how-it-works)).
+**Saturday 24 October 2026, 10:00–10:10 AM IST.** The test opens for everyone at 10:00 and closes at 10:10, when any unsubmitted answers are submitted automatically. Install Athena 1.4.0 or later before then. To change the time, edit `startsAt` in `server/data/questions.json` and push (see [Exam window](#how-it-works)).
 
 ## Download
 
