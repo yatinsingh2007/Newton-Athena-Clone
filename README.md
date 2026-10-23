@@ -49,10 +49,9 @@ To publish a new version, bump `version` in `athena/package.json`, run `npm run 
 
 ## Deployed server (Vercel)
 
-The server is deployed at **https://athena-server-one.vercel.app** (`server/vercel.json`, entry point `server/api/index.js`). To redeploy after changes:
+The server is deployed at **https://athena-server-one.vercel.app** (`server/vercel.json`, entry point `server/api/index.js`). The Vercel project's Root Directory is `server`, and every push to `main` redeploys it automatically. To deploy by hand, run this from the repo root:
 
 ```bash
-cd server
 npx vercel deploy --prod
 ```
 
