@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ExamClock } from '../components/ExamClock.jsx'
 import { Screenshot } from '../components/Screenshot.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
@@ -123,21 +123,13 @@ function StudentDetail({ api, token, student, now, onBack }) {
   )
 }
 
-// What a proctor sees after logging in: every student's progress and screen.
-export function Proctor({ api, session, onLogout }) {
+// One test as the proctor watches it: every student's progress and screen.
+// `api` is bound to that test (api.forTest).
+function TestMonitor({ api, session, onLogout }) {
   const load = useCallback(() => api.proctorStudents(session.token), [api, session.token])
   const { data, fetchedAt, error } = usePolling(load)
   const clientNow = useTick()
   const [selectedId, setSelectedId] = useState(null)
-
-  // Proctors use their Mac as normal; logging out locks the app again.
-  useEffect(() => {
-    const kiosk = window.athena?.kiosk
-    kiosk?.release()
-    return () => {
-      kiosk?.lock()
-    }
-  }, [])
 
   const lostSession = error?.status === 401 || error?.status === 403
   useEffect(() => {
@@ -152,20 +144,7 @@ export function Proctor({ api, session, onLogout }) {
   const submitted = students.filter((s) => s.attempt.status === 'submitted').length
 
   return (
-    <div className="proctor-shell">
-      <header className="proctor-header">
-        <div>
-          <p className="eyebrow">Proctor</p>
-          <h1>{data?.exam.title ?? 'Loading…'}</h1>
-        </div>
-        <div className="proctor-header-actions">
-          <ThemeToggle />
-          <button type="button" className="btn" onClick={onLogout}>
-            Log out
-          </button>
-        </div>
-      </header>
-
+    <>
       {error && !lostSession && (
         <p className="error-text" role="alert">
           {error.message} Retrying…
@@ -232,6 +211,64 @@ export function Proctor({ api, session, onLogout }) {
           )}
         </>
       )}
+    </>
+  )
+}
+
+// What a proctor sees after logging in: a tab for each test, and that test's
+// students and screens.
+export function Proctor({ api, session, onLogout }) {
+  const loadTests = useCallback(() => api.proctorTests(session.token), [api, session.token])
+  const { data } = usePolling(loadTests)
+  const [testId, setTestId] = useState('exam')
+  const testApi = useMemo(() => api.forTest(testId), [api, testId])
+  const tests = data?.tests ?? []
+  const current = tests.find((t) => t.id === testId)
+
+  // Proctors use their Mac as normal; logging out locks the app again.
+  useEffect(() => {
+    const kiosk = window.athena?.kiosk
+    kiosk?.release()
+    return () => {
+      kiosk?.lock()
+    }
+  }, [])
+
+  return (
+    <div className="proctor-shell">
+      <header className="proctor-header">
+        <div>
+          <p className="eyebrow">Proctor</p>
+          <h1>{current?.title ?? 'Loading…'}</h1>
+        </div>
+        <div className="proctor-header-actions">
+          <ThemeToggle />
+          <button type="button" className="btn" onClick={onLogout}>
+            Log out
+          </button>
+        </div>
+      </header>
+
+      {tests.length > 1 && (
+        <div className="proctor-tabs" role="tablist" aria-label="Tests">
+          {tests.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={t.id === testId}
+              className="proctor-tab"
+              onClick={() => setTestId(t.id)}
+            >
+              {t.title}
+              <span>{t.startsAt == null ? 'Any time' : 'Scheduled'}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Keyed by test, so switching starts from a clean slate. */}
+      <TestMonitor key={testId} api={testApi} session={session} onLogout={onLogout} />
     </div>
   )
 }

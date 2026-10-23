@@ -206,3 +206,35 @@
 .proctor-empty {
   color: var(--text-muted);
 }
+
+.proctor-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.proctor-tab {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.proctor-tab span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.proctor-tab[aria-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
