@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ThemeToggle } from './components/ThemeToggle.jsx'
 import { createApi } from './lib/api.js'
 import { Login } from './screens/Login.jsx'
+import { Result } from './screens/Result.jsx'
 import { SystemCheck } from './screens/SystemCheck.jsx'
 import { Test } from './screens/Test.jsx'
 
@@ -28,23 +28,10 @@ function App() {
     setScreen('login')
   }
 
-  // Placeholder screens until each real screen lands; "Continue" walks the flow.
-  if (screen === 'login') return <Login api={api} onLoggedIn={onLoggedIn} />
   if (screen === 'check') return <SystemCheck user={session.user} onReady={onReady} />
   if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} />
-
-  const next = {
-    result: onLogout,
-  }
-
-  return (
-    <main style={{ padding: 32 }}>
-      <ThemeToggle />
-      <h1>Athena</h1>
-      <p>Screen: {screen} {session?.user?.name} {result && `${result.score}/${result.total}`}</p>
-      <button type="button" className="btn btn-primary" onClick={next[screen]}>Continue</button>
-    </main>
-  )
+  if (screen === 'result') return <Result user={session.user} result={result} onLogout={onLogout} />
+  return <Login api={api} onLoggedIn={onLoggedIn} />
 }
 
 export default App

@@ -1,13 +1,23 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { ConfirmDialog } from '../components/ConfirmDialog.jsx'
 import { QuestionPalette } from '../components/QuestionPalette.jsx'
 import { QuestionText } from '../components/QuestionText.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { Timer } from '../components/Timer.jsx'
-import { questionStatus } from '../lib/questionStatus.js'
+import { questionStatus, summarize } from '../lib/questionStatus.js'
 import { remainingMs } from '../lib/timer.js'
 import './Test.css'
 
 const LETTERS = ['A', 'B', 'C', 'D']
+
+const timeLeft = (test, clientNow) =>
+  remainingMs({
+    startedAt: test.startedAt,
+    durationMinutes: test.durationMinutes,
+    serverNow: test.now,
+    clientNowAtFetch: test.fetchedAt,
+    clientNow,
+  })
 
 export function Test({ api, session, onSubmitted }) {
   const [test, setTest] = useState(null)
@@ -21,6 +31,9 @@ export function Test({ api, session, onSubmitted }) {
   const paletteButton = useRef(null)
   const [clock, setClock] = useState(() => Date.now())
   const submitting = useRef(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [submitBusy, setSubmitBusy] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const latest = useRef({ answers: {}, marked: [] })
   const saveChain = useRef(Promise.resolve())
 
@@ -46,36 +59,39 @@ export function Test({ api, session, onSubmitted }) {
     }
   }, [api, session.token])
 
-  useEffect(() => {
-    if (!test) return
-    const id = setInterval(() => setClock(Date.now()), 500)
-    return () => clearInterval(id)
-  }, [test])
-
-  const remaining = test
-    ? remainingMs({
-        startedAt: test.startedAt,
-        durationMinutes: test.durationMinutes,
-        serverNow: test.now,
-        clientNowAtFetch: test.fetchedAt,
-        clientNow: clock,
-      })
-    : null
-
-  const submitNow = useEffectEvent(async () => {
+  // One submit at a time, whether from the dialog or the timer.
+  async function submitNow() {
     if (submitting.current) return
     submitting.current = true
-    onSubmitted(await api.submit(session.token, latest.current.answers))
-  })
+    setSubmitBusy(true)
+    setSubmitError(null)
+    try {
+      onSubmitted(await api.submit(session.token, latest.current.answers))
+    } catch (err) {
+      submitting.current = false
+      setSubmitBusy(false)
+      setSubmitError(err.message)
+      setConfirmOpen(true)
+    }
+  }
 
   // Time is up: submit whatever has been answered, no confirmation.
+  const onTick = useEffectEvent(() => {
+    const now = Date.now()
+    setClock(now)
+    if (timeLeft(test, now) === 0) submitNow()
+  })
+
   useEffect(() => {
-    if (remaining === 0) submitNow()
-  }, [remaining])
+    if (!test) return
+    const id = setInterval(onTick, 500)
+    return () => clearInterval(id)
+  }, [test])
 
   if (loadError) return <div className="test-status" role="alert">{loadError}</div>
   if (!test) return <div className="test-status">Loading your test…</div>
 
+  const remaining = timeLeft(test, clock)
   const question = test.questions[index]
   const total = test.questions.length
   const selected = answers[question.id]
@@ -115,6 +131,7 @@ export function Test({ api, session, onSubmitted }) {
     delete rest[question.id]
     persist(rest, latest.current.marked)
   }
+  const counts = summarize(test.questions, answers, marked)
   const isMarked = marked.includes(question.id)
   const toggleMark = () => {
     const current = latest.current.marked
@@ -131,7 +148,9 @@ export function Test({ api, session, onSubmitted }) {
         <div className="test-header-actions">
           <Timer remaining={remaining} />
           <ThemeToggle />
-          <button type="button" className="btn btn-success">Submit Quiz</button>
+          <button type="button" className="btn btn-success" onClick={() => setConfirmOpen(true)}>
+            Submit Quiz
+          </button>
         </div>
       </header>
 
@@ -221,6 +240,20 @@ export function Test({ api, session, onSubmitted }) {
           </svg>
         </button>
       </footer>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Submit your test?"
+        body={`You've answered ${counts.answered} of ${counts.total} questions. ${counts.marked} marked for review.`}
+        confirmLabel="Submit"
+        busy={submitBusy}
+        error={submitError}
+        onConfirm={submitNow}
+        onCancel={() => {
+          setConfirmOpen(false)
+          setSubmitError(null)
+        }}
+      />
     </div>
   )
 }

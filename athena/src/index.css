@@ -200,3 +200,37 @@ input {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.dialog::backdrop {
+  background: rgba(10, 10, 14, 0.45);
+}
+
+.dialog h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.dialog p {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+}
+
+.dialog .error-text {
+  color: var(--danger);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
