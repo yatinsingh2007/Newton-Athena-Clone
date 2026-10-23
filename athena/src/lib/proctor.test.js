@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { attemptLabel, formatAgo, screenState, sortStudents, STALE_SCREEN_MS } from './proctor.js'
+import { attemptLabel, awaySummary, formatAgo, screenState, sortStudents, STALE_SCREEN_MS } from './proctor.js'
 
 const student = (status, lastScreenshotAt = null, name = 'A') => ({ name, attempt: { status }, lastScreenshotAt })
 
@@ -10,6 +10,13 @@ test('screen state', () => {
   assert.equal(screenState(student('in_progress', now - 10_000), now), 'live')
   assert.equal(screenState(student('in_progress', now - STALE_SCREEN_MS - 1), now), 'stale')
   assert.equal(screenState(student('submitted', now - STALE_SCREEN_MS - 1), now), 'done')
+})
+
+test('away summary', () => {
+  const attempt = { status: 'in_progress', away: [{ leftAt: 0, backAt: 4000 }, { leftAt: 10_000, backAt: null }] }
+  assert.deepEqual(awaySummary(attempt, 12_000), { count: 2, totalMs: 6000, awayNow: true })
+  assert.equal(awaySummary({ ...attempt, status: 'submitted' }, 12_000).awayNow, false)
+  assert.deepEqual(awaySummary({ status: 'not_started' }, 0), { count: 0, totalMs: 0, awayNow: false })
 })
 
 test('attempt label', () => {
