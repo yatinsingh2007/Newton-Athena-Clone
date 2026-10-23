@@ -1,8 +1,8 @@
 import express, { Router } from 'express'
 import {
   deadlineOf,
+  examInfo as examInfoAt,
   examPhase,
-  examWindow,
   finalizeAttempt,
   findAttempt,
   freshAttempt,
@@ -28,17 +28,7 @@ export function testRoutes({ dataDir, now }) {
   const router = Router()
   const loadTest = () => readJson(dataDir, 'questions.json', null)
   const isExpired = (attempt, test) => now() > deadlineOf(attempt, test) + GRACE_MS
-  // The exam's schedule and the server's clock, for the app's live countdown.
-  const examInfo = (test) => {
-    const window = examWindow(test)
-    return {
-      title: test.title,
-      durationMinutes: test.durationMinutes,
-      startsAt: window?.startsAt ?? null,
-      endsAt: window?.endsAt ?? null,
-      now: now(),
-    }
-  }
+  const examInfo = (test) => examInfoAt(test, now())
 
   router.use(requireAuth(dataDir, 'student'))
 

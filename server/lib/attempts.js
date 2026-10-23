@@ -45,6 +45,18 @@ export function examPhase(test, now) {
   return 'open'
 }
 
+// The exam's schedule and the server's clock, for the app's live countdowns.
+export function examInfo(test, now) {
+  const window = examWindow(test)
+  return {
+    title: test.title,
+    durationMinutes: test.durationMinutes,
+    startsAt: window?.startsAt ?? null,
+    endsAt: window?.endsAt ?? null,
+    now,
+  }
+}
+
 export function deadlineOf(attempt, test) {
   return examWindow(test)?.endsAt ?? attempt.startedAt + test.durationMinutes * 60_000
 }
