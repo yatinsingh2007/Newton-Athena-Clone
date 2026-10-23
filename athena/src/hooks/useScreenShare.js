@@ -58,5 +58,5 @@ export function useScreenShare() {
   }
 
   const live = stream?.getVideoTracks()[0]?.readyState === 'live'
-  return { live, error, pending, start, stop, openSettings: screenApi?.openSettings }
+  return { stream, live, error, pending, start, stop, openSettings: screenApi?.openSettings }
 }

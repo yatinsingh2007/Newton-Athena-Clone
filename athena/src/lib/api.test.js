@@ -37,6 +37,14 @@ test('saveAttempt PUTs answers and marked', async () => {
   assert.deepEqual(JSON.parse(calls[0].body), { answers: { q1: 1 }, marked: ['q2'] })
 })
 
+test('uploadScreen sends the image as it is', async () => {
+  const { impl, calls } = fakeFetch({ 'POST /api/screen': [201, { ok: true }] })
+  const jpeg = new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: 'image/jpeg' })
+  await createApi('http://x', impl).uploadScreen('tok', jpeg)
+  assert.equal(calls[0].headers['Content-Type'], 'image/jpeg')
+  assert.equal(calls[0].body, jpeg)
+})
+
 test('non-2xx throws ApiError with server message', async () => {
   const { impl } = fakeFetch({ 'POST /api/login': [401, { error: 'Invalid email or password' }] })
   await assert.rejects(createApi('http://x', impl).login('a', 'b'), (err) => {
