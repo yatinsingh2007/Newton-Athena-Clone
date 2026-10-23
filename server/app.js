@@ -1,5 +1,6 @@
 import express from 'express'
 import { authRoutes } from './routes/auth.js'
+import { proctorRoutes } from './routes/proctor.js'
 import { testRoutes } from './routes/test.js'
 
 function cors(req, res, next) {
@@ -17,6 +18,8 @@ export function createApp({ dataDir, now = () => Date.now() }) {
 
   app.get('/api/health', (req, res) => res.json({ ok: true }))
   app.use('/api', authRoutes({ dataDir }))
+  // Before the student routes, which turn away anyone who isn't a student.
+  app.use('/api/proctor', proctorRoutes({ dataDir, now }))
   app.use('/api', testRoutes({ dataDir, now }))
 
   return app
