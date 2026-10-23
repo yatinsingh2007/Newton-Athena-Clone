@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import { ThemeToggle } from './components/ThemeToggle.jsx'
+import { createApi } from './lib/api.js'
+import { Login } from './screens/Login.jsx'
+
+const api = createApi()
 
 function App() {
   const [screen, setScreen] = useState('login')
@@ -23,8 +27,9 @@ function App() {
   }
 
   // Placeholder screens until each real screen lands; "Continue" walks the flow.
+  if (screen === 'login') return <Login api={api} onLoggedIn={onLoggedIn} />
+
   const next = {
-    login: () => onLoggedIn({ token: null, user: null }, null),
     check: onReady,
     test: () => onSubmitted({ score: 0, total: 10, submittedAt: Date.now() }),
     result: onLogout,

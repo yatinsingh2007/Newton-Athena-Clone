@@ -1,4 +1,4 @@
-export const API_URL = 'http://localhost:4000'
+export const API_URL = 'http://localhost:4747'
 
 export class ApiError extends Error {
   constructor(message, status) {
