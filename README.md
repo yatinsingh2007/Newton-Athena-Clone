@@ -1,6 +1,18 @@
 # Athena Clone
 
-A desktop clone of Newton School's Athena exam app. A student logs in, passes a camera and microphone check, takes a 10-minute, 10-question MCQ test, and sees their score.
+A desktop clone of Newton School's Athena exam app. A student logs in or signs up, passes a camera and microphone check, takes a 10-minute, 10-question MCQ test in a locked full-screen window, and sees their score. They can reattempt the test afterwards.
+
+## Download
+
+**[⬇ Download Athena for Mac (Apple Silicon)](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases/download/v1.0.0/Athena-1.0.0-arm64.dmg)** · [All releases](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases)
+
+1. Open the `.dmg` and drag **Athena** into **Applications**.
+2. The app isn't signed with an Apple Developer certificate, so macOS blocks it the first time. Right-click Athena in Applications, choose **Open**, then **Open** again. After that it opens normally.
+3. Log in with a demo account (see [Accounts](#accounts)) or create your own.
+
+The downloaded app uses the [demo server on Vercel](#deployed-server-vercel), so there's nothing else to run.
+
+## Project layout
 
 - `server/` — Express API. All data is stored in JSON files in `server/data/`; there is no database.
 - `athena/` — Electron desktop app (React + Vite).
@@ -31,11 +43,9 @@ npm install
 npm run dist
 ```
 
-This builds the app and writes `athena/release/Athena-1.0.0-arm64.dmg` (Apple Silicon Macs).
+This builds the app and writes `athena/release/Athena-1.0.0-arm64.dmg` (Apple Silicon Macs). Install it the same way as the [download](#download). It talks to the deployed server on Vercel, so it works without running the server locally.
 
-To install, open the `.dmg` and drag **Athena** into **Applications**. The app isn't signed with an Apple Developer certificate, so the first time you open it macOS will block it. Right-click Athena in Applications, choose **Open**, then **Open** again. After that it opens normally.
-
-The `.dmg` talks to the deployed server on Vercel (see below), so it works without running the server locally.
+To publish a new version, bump `version` in `athena/package.json`, run `npm run dist`, and attach the new `.dmg` to a [GitHub release](https://github.com/yatinsingh2007/Newton-Athena-Clone/releases).
 
 ## Deployed server (Vercel)
 
