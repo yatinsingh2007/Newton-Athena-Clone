@@ -38,6 +38,7 @@ export function createApi(baseUrl = API_URL, fetchImpl = (...args) => fetch(...a
     saveAttempt: (token, { answers, marked }) =>
       call('/api/attempt', { method: 'PUT', token, body: { answers, marked } }),
     getResult: (token) => call('/api/result', { token }),
+    retake: (token) => call('/api/retake', { method: 'POST', token }),
     async submit(token, answers) {
       try {
         return await call('/api/submit', { method: 'POST', token, body: { answers } })

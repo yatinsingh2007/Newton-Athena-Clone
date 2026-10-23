@@ -19,6 +19,10 @@ function App() {
     setScreen(savedResult ? 'result' : 'check')
   }
   const onReady = () => setScreen('test')
+  const onRetake = () => {
+    setResult(null)
+    setScreen('check')
+  }
   const onSubmitted = (nextResult) => {
     setResult(nextResult)
     setScreen('result')
@@ -31,7 +35,9 @@ function App() {
 
   if (screen === 'check') return <SystemCheck user={session.user} onReady={onReady} />
   if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} onSessionLost={onLogout} />
-  if (screen === 'result') return <Result user={session.user} result={result} onLogout={onLogout} />
+  if (screen === 'result') {
+    return <Result api={api} session={session} result={result} onRetake={onRetake} onLogout={onLogout} />
+  }
   if (screen === 'signup') {
     return <Signup api={api} onSignedUp={onLoggedIn} onShowLogin={() => setScreen('login')} />
   }

@@ -57,6 +57,40 @@
   color: var(--text-muted);
 }
 
-.result-card .btn {
-  width: 100%;
+.result-history {
+  margin: 0 0 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+
+.result-history ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.result-history li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.result-history strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.result-error {
+  margin-bottom: 16px;
+}
+
+.result-actions {
+  display: grid;
+  gap: 10px;
 }
