@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
 import { publicUser } from '../lib/auth.js'
-import { readJson, writeJson } from '../lib/store.js'
+import { readJson, updateJson } from '../lib/store.js'
 
 export function authRoutes({ dataDir }) {
   const router = Router()
@@ -19,9 +19,9 @@ export function authRoutes({ dataDir }) {
     if (!user) return res.status(401).json({ error: 'Invalid email or password' })
 
     const token = randomUUID()
-    const sessions = await readJson(dataDir, 'sessions.json', {})
-    sessions[token] = user.id
-    await writeJson(dataDir, 'sessions.json', sessions)
+    await updateJson(dataDir, 'sessions.json', {}, (sessions) => ({
+      next: { ...sessions, [token]: user.id },
+    }))
 
     res.json({ token, user: publicUser(user) })
   })
