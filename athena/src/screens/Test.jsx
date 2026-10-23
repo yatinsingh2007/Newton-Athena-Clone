@@ -5,6 +5,7 @@ import { QuestionText } from '../components/QuestionText.jsx'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { Timer } from '../components/Timer.jsx'
 import { questionStatus, summarize } from '../lib/questionStatus.js'
+import { screenErrorMessage } from '../lib/screenShare.js'
 import { createSaveQueue } from '../lib/saveQueue.js'
 import {
   autoSubmitDue,
@@ -24,7 +25,7 @@ const msUntil = (at, data, clientNow) =>
 
 const timeLeft = (test, clientNow) => msUntil(test.endsAt, test, clientNow)
 
-export function Test({ api, session, onSubmitted, onSessionLost }) {
+export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) {
   const [test, setTest] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -235,6 +236,9 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
     persist(rest, latest.current.marked)
   }
   const counts = summarize(test.questions, answers, marked)
+  // Stopped sharing, or reloaded the app: the questions stay hidden until the
+  // screen is shared again. The clock keeps running meanwhile.
+  const screenBlocked = !screenShare.live
   const isMarked = marked.includes(question.id)
   const toggleMark = () => {
     const current = latest.current.marked
@@ -246,7 +250,34 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
 
   return (
     <div className="test-shell">
-      <header className="test-header">
+      {screenBlocked && (
+        <div className="screen-block" role="alertdialog" aria-labelledby="screen-block-title">
+          <div className="screen-block-box">
+            <h2 id="screen-block-title">Share your screen to continue</h2>
+            <p>
+              {screenShare.error ? screenErrorMessage(screenShare.error) : 'Your screen must be shared for the whole test.'}{' '}
+              The timer keeps running.
+            </p>
+            <Timer remaining={remaining} />
+            <div className="screen-block-actions">
+              {screenShare.error === 'blocked' && screenShare.openSettings && (
+                <button type="button" className="btn" onClick={() => screenShare.openSettings()}>
+                  Open System Settings
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => screenShare.start()}
+                disabled={screenShare.pending}
+              >
+                {screenShare.pending ? 'Waiting for permission…' : 'Share your screen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <header className="test-header" inert={screenBlocked}>
         <h1 className="test-title">{test.title}</h1>
         <div className="test-header-actions">
           <Timer remaining={remaining} />
@@ -257,7 +288,7 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
         </div>
       </header>
 
-      <main className="test-body">
+      <main className="test-body" inert={screenBlocked}>
         <div className="question-header">
           <p className="question-count">QUESTION {index + 1}/{total}</p>
           <div className="question-tools">
@@ -300,7 +331,7 @@ export function Test({ api, session, onSubmitted, onSessionLost }) {
         </div>
       </main>
 
-      <footer className="test-footer">
+      <footer className="test-footer" inert={screenBlocked}>
         <button type="button" className="btn btn-ghost" onClick={() => goTo(index - 1)} disabled={index === 0}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 18l-6-6 6-6" />

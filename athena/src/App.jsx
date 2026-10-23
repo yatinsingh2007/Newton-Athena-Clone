@@ -65,7 +65,15 @@ function App() {
   if (screen === 'check') return (
       <SystemCheck api={api} session={session} screenShare={screenShare} onReady={onReady} />
     )
-  if (screen === 'test') return <Test api={api} session={session} onSubmitted={onSubmitted} onSessionLost={onLogout} />
+  if (screen === 'test') return (
+      <Test
+        api={api}
+        session={session}
+        screenShare={screenShare}
+        onSubmitted={onSubmitted}
+        onSessionLost={onLogout}
+      />
+    )
   if (screen === 'result') {
     return (
       <Result

@@ -258,3 +258,36 @@
   max-width: 420px;
   text-align: center;
 }
+
+.screen-block {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--bg);
+}
+
+.screen-block-box {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  max-width: 440px;
+  text-align: center;
+}
+
+.screen-block-box h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.screen-block-box p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.screen-block-actions {
+  display: flex;
+  gap: 12px;
+}
