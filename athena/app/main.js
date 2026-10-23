@@ -87,6 +87,18 @@ ipcMain.handle('media:open-settings', async () => {
   await shell.openExternal(onlyMicBlocked ? urls.microphone : urls.camera)
 })
 
+// ---- Exam lock (called from preload.js over IPC) ----
+// Kiosk mode makes the window full screen and, on macOS, blocks swiping to other
+// desktops, Cmd+Tab, the Dock and the menu bar until the test is over.
+
+ipcMain.handle('exam:lock', (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.setKiosk(true)
+})
+
+ipcMain.handle('exam:unlock', (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.setKiosk(false)
+})
+
 // ---- App lifecycle ----
 
 app.whenReady().then(() => {
