@@ -9,6 +9,7 @@ import { formatClock } from '../lib/timer.js'
 import './SystemCheck.css'
 
 const media = window.athena?.media
+const screenApi = window.athena?.screen
 
 const isLive = (track) => track?.readyState === 'live'
 
@@ -22,6 +23,7 @@ export function SystemCheck({ api, session, screenShare, onReady }) {
   const [, setTrackChange] = useState(0)
   const [osBlocked, setOsBlocked] = useState(false)
   const [pending, setPending] = useState(false)
+  const [displayCount, setDisplayCount] = useState(1)
 
   const streamRef = useRef(null)
 
@@ -38,6 +40,15 @@ export function SystemCheck({ api, session, screenShare, onReady }) {
     tracks.forEach((t) => t.addEventListener('ended', onEnded))
     return () => tracks.forEach((t) => t.removeEventListener('ended', onEnded))
   }, [stream])
+
+  // Re-checked every few seconds, so unplugging a monitor clears the warning.
+  useEffect(() => {
+    if (!screenApi?.getCount) return
+    const check = () => screenApi.getCount().then(setDisplayCount, () => {})
+    check()
+    const id = setInterval(check, 2000)
+    return () => clearInterval(id)
+  }, [])
 
   // Release the camera and mic when leaving this screen; the test never uses them.
   useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), [])
@@ -70,7 +81,8 @@ export function SystemCheck({ api, session, screenShare, onReady }) {
   const ready = devicesOk && screenShare.live
   // The test can only be opened while its window is live (or if it has none).
   const phase = clock?.phase ?? 'anytime'
-  const canStart = phase === 'open' || phase === 'anytime'
+  const extraMonitors = displayCount > 1
+  const canStart = (phase === 'open' || phase === 'anytime') && !extraMonitors
 
   function start() {
     stream.getTracks().forEach((t) => t.stop())
@@ -140,6 +152,12 @@ export function SystemCheck({ api, session, screenShare, onReady }) {
         {screenShare.error && (
           <div className="check-error">
             <p className="error-text" role="alert">{screenErrorMessage(screenShare.error)}</p>
+          </div>
+        )}
+
+        {extraMonitors && (
+          <div className="check-error">
+            <p className="error-text" role="alert">Disconnect extra monitors to start the test.</p>
           </div>
         )}
 

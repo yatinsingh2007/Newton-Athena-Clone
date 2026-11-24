@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('athena', {
   },
   screen: {
     getStatus: () => ipcRenderer.invoke('screen:status'),
+    getCount: () => ipcRenderer.invoke('screen:count'),
     openSettings: () => ipcRenderer.invoke('screen:open-settings'),
   },
   kiosk: {

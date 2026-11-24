@@ -152,6 +152,9 @@ ipcMain.handle('screen:status', () =>
   process.platform === 'darwin' ? systemPreferences.getMediaAccessStatus('screen') : 'granted',
 )
 
+// More than one display lets a student keep notes on another screen.
+ipcMain.handle('screen:count', () => screen.getAllDisplays().length)
+
 ipcMain.handle('screen:open-settings', async (event) => {
   const url = SETTINGS_URLS[process.platform]?.screen
   if (url) await openSettings(event, url)
