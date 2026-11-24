@@ -28,10 +28,11 @@ const locked = new Set()
 const inTest = new Set()
 
 // With Cmd (or Ctrl): close, hide, minimise, new window, new tab. During the
-// test, quit and reload too; outside it Cmd+Q still quits, since macOS needs
-// Athena restarted after Screen Recording is turned on.
+// test, quit, reload, copy, paste, cut and select all too; outside it Cmd+Q
+// still quits, since macOS needs Athena restarted after Screen Recording is
+// turned on.
 const BLOCKED_KEYS = new Set(['w', 'h', 'm', 'n', 't'])
-const BLOCKED_IN_TEST = new Set(['q', 'r'])
+const BLOCKED_IN_TEST = new Set(['q', 'r', 'c', 'v', 'x', 'a'])
 
 // The window should only ever show the app's own page.
 function isTrustedUrl(url) {
@@ -76,7 +77,7 @@ function createWindow() {
   })
 
   // While locked, shortcuts that would close, hide or minimise the window (and,
-  // during the test, quit or reload) do nothing.
+  // during the test, quit, reload or use the clipboard) do nothing.
   win.webContents.on('before-input-event', (event, input) => {
     if (!locked.has(win) || input.type !== 'keyDown' || !(input.meta || input.control)) return
     const key = input.key.toLowerCase()

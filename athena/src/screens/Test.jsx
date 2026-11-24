@@ -123,8 +123,12 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
   useEffect(() => {
     const exam = window.athena?.exam
     exam?.lock()
+    // No right-click menu (copy, paste, inspect) during the test either.
+    const blockMenu = (e) => e.preventDefault()
+    document.addEventListener('contextmenu', blockMenu)
     return () => {
       exam?.unlock()
+      document.removeEventListener('contextmenu', blockMenu)
     }
   }, [])
 
