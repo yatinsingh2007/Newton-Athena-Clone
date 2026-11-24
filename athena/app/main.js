@@ -32,7 +32,9 @@ const inTest = new Set()
 // still quits, since macOS needs Athena restarted after Screen Recording is
 // turned on.
 const BLOCKED_KEYS = new Set(['w', 'h', 'm', 'n', 't'])
-const BLOCKED_IN_TEST = new Set(['q', 'r', 'c', 'v', 'x', 'a'])
+// In development (`npm run dev`) quitting always works: Cmd+Q, the Dock, or
+// Ctrl+C in the terminal, which Electron also turns into a quit.
+const BLOCKED_IN_TEST = new Set(devServerUrl ? ['r', 'c', 'v', 'x', 'a'] : ['q', 'r', 'c', 'v', 'x', 'a'])
 
 // The window should only ever show the app's own page.
 function isTrustedUrl(url) {
@@ -245,9 +247,10 @@ app.whenReady().then(() => {
   })
 })
 
-// No quitting mid-test (Cmd+Q from the menu, the Dock, or logging out).
+// No quitting mid-test (Cmd+Q from the menu, the Dock, or logging out),
+// except in development.
 app.on('before-quit', (event) => {
-  if (inTest.size > 0) event.preventDefault()
+  if (inTest.size > 0 && !devServerUrl) event.preventDefault()
 })
 
 app.on('window-all-closed', () => {

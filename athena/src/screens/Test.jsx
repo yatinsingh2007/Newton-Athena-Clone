@@ -118,9 +118,12 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
     return () => clearInterval(id)
   }, [api, session.token, hasTest])
 
-  // The app is locked from launch; during the test it also can't quit or reload.
-  // Leaving this screen (submit, logout, lost session) lifts just that.
+  // The app is locked from launch; while the questions are on screen it also
+  // can't quit or reload. Not before: a test that's loading, failed to load,
+  // hasn't started or has closed must never trap the student. Leaving this
+  // screen (submit, logout, lost session) lifts just that.
   useEffect(() => {
+    if (!hasTest) return
     const exam = window.athena?.exam
     exam?.lock()
     // No right-click menu (copy, paste, inspect) during the test either.
@@ -130,7 +133,7 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
       exam?.unlock()
       document.removeEventListener('contextmenu', blockMenu)
     }
-  }, [])
+  }, [hasTest])
 
   // One submit at a time, whether from the dialog or the timer.
   async function submitNow({ auto = false } = {}) {
