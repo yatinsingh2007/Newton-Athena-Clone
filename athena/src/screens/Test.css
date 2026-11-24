@@ -289,7 +289,13 @@
 
 .screen-block-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
+}
+
+.screen-block-actions .btn {
+  white-space: nowrap;
 }
 
 .away-warning {

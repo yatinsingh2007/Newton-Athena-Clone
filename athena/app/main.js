@@ -176,6 +176,15 @@ async function shareScreen(request, callback) {
   }
 }
 
+// macOS only lets Athena capture the screen after a restart once Screen
+// Recording is turned on. Relaunching skips the mid-test quit block (app.exit
+// doesn't ask before-quit), and Athena comes straight back to the test.
+ipcMain.handle('app:relaunch', () => {
+  if (process.platform !== 'darwin') return
+  app.relaunch()
+  app.exit(0)
+})
+
 // ---- Lock (called from preload.js over IPC) ----
 // Kiosk mode makes the window full screen and, on macOS, hides the Dock and
 // menu bar and asks the system to block Cmd+Tab and swiping to other desktops.

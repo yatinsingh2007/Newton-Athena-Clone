@@ -1,7 +1,7 @@
 const messages = {
   NotAllowedError: 'Screen sharing was cancelled or blocked. Share your screen to continue.',
   blocked:
-    'Athena needs Screen Recording permission. Turn it on for Athena in System Settings → Privacy & Security, then quit and reopen Athena.',
+    'Athena needs Screen Recording permission. Turn it on for Athena in System Settings → Privacy & Security, then restart Athena.',
   window: 'Share your entire screen, not a single window or tab.',
   ended: 'Screen sharing stopped. Share your screen again to continue.',
 }

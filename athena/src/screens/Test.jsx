@@ -155,6 +155,13 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
     }
   }
 
+  // After turning on Screen Recording, macOS needs Athena restarted, and quitting
+  // is blocked during the test. Save the answers first; the test resumes on reopen.
+  async function restart() {
+    await saveQueue.current?.flush().catch(() => {})
+    window.athena.app.relaunch()
+  }
+
   // Time is up: submit whatever has been answered, no confirmation.
   const onTick = useEffectEvent(() => {
     const now = monotonicNow()
@@ -278,6 +285,11 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
               {screenShare.error === 'blocked' && screenShare.openSettings && (
                 <button type="button" className="btn" onClick={() => screenShare.openSettings()}>
                   Open System Settings
+                </button>
+              )}
+              {screenShare.error === 'blocked' && window.athena?.app && (
+                <button type="button" className="btn" onClick={restart}>
+                  Restart Athena
                 </button>
               )}
               <button

@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('athena', {
     getCount: () => ipcRenderer.invoke('screen:count'),
     openSettings: () => ipcRenderer.invoke('screen:open-settings'),
   },
+  app: {
+    relaunch: () => ipcRenderer.invoke('app:relaunch'),
+  },
   kiosk: {
     release: () => ipcRenderer.invoke('kiosk:release'),
     lock: () => ipcRenderer.invoke('kiosk:lock'),
