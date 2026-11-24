@@ -300,6 +300,15 @@ export function Test({ api, session, screenShare, onSubmitted, onSessionLost }) 
         </div>
       </header>
 
+      {remaining > 0 && remaining < 60_000 && (
+        <div className="away-warning" role="alert">
+          <p>
+            <strong>Less than a minute left.</strong> Your answers are submitted automatically when
+            time is up.
+          </p>
+        </div>
+      )}
+
       {awayInfo.lastAwayMs !== null && (
         <div className="away-warning" role="alert">
           <p>
